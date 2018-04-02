@@ -83,3 +83,56 @@ func TestParseSimpleFunc(t *testing.T) {
 		spew.Dump(t.Name(), file)
 	}
 }
+
+func TestParseSimpleStruct(t *testing.T) {
+	t.Parallel()
+	simpleMain, err := os.Open("testdata/simple_struct.go")
+	require.Nil(t, err)
+	defer simpleMain.Close()
+
+	file, err := smgo.Parse(simpleMain, "UTF-8")
+	assert.NotNil(t, file)
+	assert.Nil(t, err)
+
+	assert.Equal(t, &smgo.File{
+		LocationSpan: newLocationSpan(1, 0, 9, 2),
+		FooterSpan:   smgo.RuneSpan{0, -1},
+		Containers: []*smgo.Container{
+			{
+				Type:         smgo.StructContainer,
+				Name:         "Person",
+				LocationSpan: newLocationSpan(2, 0, 5, 2),
+				HeaderSpan:   smgo.RuneSpan{21, 42},
+				FooterSpan:   smgo.RuneSpan{56, 57},
+				Containers:   nil,
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.FieldNode,
+						Name:         "Name",
+						LocationSpan: newLocationSpan(4, 0, 4, 13),
+						Span:         smgo.RuneSpan{43, 55},
+					},
+				},
+			},
+		},
+		Nodes: []*smgo.Node{
+			{
+				Type:         smgo.PackageNode,
+				Name:         "simplestruct",
+				LocationSpan: newLocationSpan(1, 0, 1, 21),
+				Span:         smgo.RuneSpan{0, 20},
+			},
+			{
+				Type:         smgo.FunctionNode,
+				Name:         "SayHi",
+				LocationSpan: newLocationSpan(6, 0, 9, 2),
+				Span:         smgo.RuneSpan{58, 115},
+			},
+		},
+		ParsingErrors: nil,
+	}, file)
+	if t.Failed() {
+		spew.Dump(t.Name(), file)
+	}
+
+}

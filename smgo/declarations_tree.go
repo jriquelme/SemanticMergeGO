@@ -30,6 +30,7 @@ type NodeType int
 const (
 	PackageNode NodeType = iota
 	FunctionNode
+	FieldNode
 )
 
 type Node struct {
