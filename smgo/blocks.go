@@ -7,6 +7,8 @@ import (
 
 type blockType int
 
+//go:generate stringer -type=blockType
+
 const (
 	nodeBlock blockType = iota
 	containerHeader

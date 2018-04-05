@@ -11,6 +11,8 @@ type File struct {
 
 type ContainerType int
 
+//go:generate stringer -type=ContainerType
+
 const (
 	StructContainer ContainerType = iota
 )
@@ -26,6 +28,8 @@ type Container struct {
 }
 
 type NodeType int
+
+//go:generate stringer -type=NodeType
 
 const (
 	PackageNode NodeType = iota
