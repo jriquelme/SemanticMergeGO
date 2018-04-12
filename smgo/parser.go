@@ -127,6 +127,15 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 			v.Blocks = append(v.Blocks, blocks...)
 			return nil
 		}
+	case *ast.ImportSpec:
+		importNode := createImport(v.FileSet, n)
+		v.File.Nodes = append(v.File.Nodes, importNode)
+		v.Blocks = append(v.Blocks, block{
+			Type:      nodeBlock,
+			Node:      importNode,
+			Container: nil,
+		})
+		return nil
 	}
 	return nil
 }
@@ -265,4 +274,32 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 	})
 
 	return container, blocks
+}
+
+func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
+	var name string
+	switch n.Path.Kind {
+	case token.STRING:
+		name = n.Path.Value[1 : len(n.Path.Value)-1]
+	default:
+		panic("Unknown token type for import Path")
+	}
+	return &Node{
+		Type: ImportNode,
+		Name: name,
+		LocationSpan: LocationSpan{
+			Start: Location{
+				Line:   fset.Position(n.Pos()).Line,
+				Column: fset.Position(n.Pos()).Column,
+			},
+			End: Location{
+				Line:   fset.Position(n.End()).Line,
+				Column: fset.Position(n.End()).Column,
+			},
+		},
+		Span: RuneSpan{
+			Start: fset.Position(n.Pos()).Offset,
+			End:   fset.Position(n.End()).Offset,
+		},
+	}
 }
