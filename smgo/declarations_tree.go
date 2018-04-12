@@ -1,5 +1,7 @@
 package smgo
 
+import "fmt"
+
 // File is the root of the declarations tree.
 type File struct {
 	LocationSpan  LocationSpan
@@ -54,12 +56,24 @@ type Location struct {
 	Column int
 }
 
+func (l Location) String() string {
+	return fmt.Sprintf("[L:%d C:%d]", l.Line, l.Column)
+}
+
 type LocationSpan struct {
 	Start Location
 	End   Location
 }
 
+func (ls LocationSpan) String() string {
+	return fmt.Sprintf("S:%s E:%s", ls.Start, ls.End)
+}
+
 type RuneSpan struct {
 	Start int
 	End   int
+}
+
+func (rs RuneSpan) String() string {
+	return fmt.Sprintf("[%d, %d]", rs.Start, rs.End)
 }

@@ -26,6 +26,9 @@ func newLocationSpan(startLine, startColumn, endLine, endColumn int) smgo.Locati
 
 func TestParseEmpty(t *testing.T) {
 	t.Parallel()
+	if testing.Verbose() {
+		smgo.PrintBlocks = true
+	}
 
 	src := bytes.NewReader([]byte{})
 	file, err := smgo.Parse(src, "UTF-8")
@@ -51,6 +54,10 @@ func TestParseEmpty(t *testing.T) {
 
 func TestParseSimpleFunc(t *testing.T) {
 	t.Parallel()
+	if testing.Verbose() {
+		smgo.PrintBlocks = true
+	}
+
 	simpleMain, err := os.Open("testdata/simple_func.go")
 	require.Nil(t, err)
 	defer simpleMain.Close()
@@ -86,6 +93,10 @@ func TestParseSimpleFunc(t *testing.T) {
 
 func TestParseSimpleStruct(t *testing.T) {
 	t.Parallel()
+	if testing.Verbose() {
+		smgo.PrintBlocks = true
+	}
+
 	simpleMain, err := os.Open("testdata/simple_struct.go")
 	require.Nil(t, err)
 	defer simpleMain.Close()

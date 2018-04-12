@@ -3,6 +3,8 @@ package smgo
 import (
 	"bytes"
 	"errors"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type blockType int
@@ -44,13 +46,67 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 			n.Span.Start = pos + 1
 			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
 			n.LocationSpan.Start.Column = 0
+			pos = n.Span.End
 		case containerHeader:
-			return errors.New("case not covered")
+			n := b.Container
+			n.LocationSpan.Start.Column = 0 // FIXME
+			b := src[pos+1 : n.HeaderSpan.Start]
+			newLines := bytes.Count(b, []byte{0x0a})
+			n.HeaderSpan.Start = pos + 1
+			n.HeaderSpan.End = n.HeaderSpan.End + 1
+			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
+			n.LocationSpan.Start.Column = 0
+			pos = n.HeaderSpan.End
 		case containerFooter:
-			return errors.New("case not covered")
+			n := b.Container
+			n.LocationSpan.Start.Column = 0 // FIXME
+			b := src[pos+1 : n.FooterSpan.Start]
+			newLines := bytes.Count(b, []byte{0x0a})
+			n.FooterSpan.Start = pos + 1
+			n.FooterSpan.End = n.FooterSpan.End + 1
+			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
+			n.LocationSpan.Start.Column = 0
+			pos = n.FooterSpan.End
 		default:
-			return errors.New("case not covered")
+			panic("impossibru!")
 		}
 	}
 	return nil
+}
+
+type debugBlock struct {
+	Name         string
+	LocationSpan LocationSpan
+	Span         RuneSpan
+}
+
+func printBlocks(blocks []block) {
+	debugBlocks := make([]debugBlock, 0, len(blocks))
+	for _, b := range blocks {
+		switch b.Type {
+		case nodeBlock:
+			debugBlocks = append(debugBlocks, debugBlock{
+				Name:         b.Node.Name,
+				LocationSpan: b.Node.LocationSpan,
+				Span:         b.Node.Span,
+			})
+		case containerHeader:
+			debugBlocks = append(debugBlocks, debugBlock{
+				Name:         b.Container.Name,
+				LocationSpan: b.Container.LocationSpan,
+				Span:         b.Container.HeaderSpan,
+			})
+		case containerFooter:
+			debugBlocks = append(debugBlocks, debugBlock{
+				Name:         b.Container.Name,
+				LocationSpan: b.Container.LocationSpan,
+				Span:         b.Container.FooterSpan,
+			})
+		default:
+			panic("impossibru!")
+		}
+	}
+	spew.Printf("=========\n")
+	spew.Dump("Debug Blocks", debugBlocks)
+	spew.Printf("=========\n")
 }
