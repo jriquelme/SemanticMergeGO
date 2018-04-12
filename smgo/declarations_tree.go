@@ -37,6 +37,7 @@ const (
 	PackageNode NodeType = iota
 	FunctionNode
 	FieldNode
+	ImportNode
 )
 
 type Node struct {

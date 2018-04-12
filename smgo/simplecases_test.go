@@ -91,6 +91,46 @@ func TestParseSimpleFunc(t *testing.T) {
 	}
 }
 
+func TestParseSimpleImport(t *testing.T) {
+	t.Parallel()
+	if testing.Verbose() {
+		smgo.PrintBlocks = true
+	}
+
+	simpleImport, err := os.Open("testdata/simple_import.go_src")
+	require.Nil(t, err)
+	defer simpleImport.Close()
+
+	file, err := smgo.Parse(simpleImport, "UTF-8")
+	assert.NotNil(t, file)
+	assert.Nil(t, err)
+
+	assert.Equal(t, &smgo.File{
+		LocationSpan: newLocationSpan(1, 0, 3, 13),
+		FooterSpan:   smgo.RuneSpan{0, -1},
+		Containers:   nil,
+		Nodes: []*smgo.Node{
+			{
+				Type:         smgo.PackageNode,
+				Name:         "simpleimport",
+				LocationSpan: newLocationSpan(1, 0, 1, 21),
+				Span:         smgo.RuneSpan{0, 20},
+			},
+			{
+				Type:         smgo.ImportNode,
+				Name:         "fmt",
+				LocationSpan: newLocationSpan(2, 0, 3, 13),
+				Span:         smgo.RuneSpan{21, 34},
+			},
+		},
+		ParsingErrors: nil,
+	}, file)
+	if t.Failed() {
+		spew.Dump(t.Name(), file)
+	}
+
+}
+
 func TestParseSimpleStruct(t *testing.T) {
 	t.Parallel()
 	if testing.Verbose() {
