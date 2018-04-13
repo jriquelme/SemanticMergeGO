@@ -58,11 +58,11 @@ func TestParseSimpleFunc(t *testing.T) {
 		smgo.PrintBlocks = true
 	}
 
-	simpleMain, err := os.Open("testdata/simple_func.go")
+	simpleFunc, err := os.Open("testdata/simple_func.go")
 	require.Nil(t, err)
-	defer simpleMain.Close()
+	defer simpleFunc.Close()
 
-	file, err := smgo.Parse(simpleMain, "UTF-8")
+	file, err := smgo.Parse(simpleFunc, "UTF-8")
 	assert.NotNil(t, file)
 	assert.Nil(t, err)
 
@@ -137,11 +137,11 @@ func TestParseSimpleStruct(t *testing.T) {
 		smgo.PrintBlocks = true
 	}
 
-	simpleMain, err := os.Open("testdata/simple_struct.go")
+	simpleStruct, err := os.Open("testdata/simple_struct.go")
 	require.Nil(t, err)
-	defer simpleMain.Close()
+	defer simpleStruct.Close()
 
-	file, err := smgo.Parse(simpleMain, "UTF-8")
+	file, err := smgo.Parse(simpleStruct, "UTF-8")
 	assert.NotNil(t, file)
 	assert.Nil(t, err)
 
