@@ -213,6 +213,83 @@ func TestParseSimpleCases(t *testing.T) {
 			},
 		},
 		{
+			Src: "simple_types.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 21, 22),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers:   nil,
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simpletypes",
+						LocationSpan: newLocationSpan(1, 0, 1, 20),
+						Span:         smgo.RuneSpan{0, 19},
+					},
+					{
+						Type:         smgo.ImportNode,
+						Name:         "io",
+						LocationSpan: newLocationSpan(2, 0, 3, 12),
+						Span:         smgo.RuneSpan{20, 32},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "String",
+						LocationSpan: newLocationSpan(4, 0, 5, 19),
+						Span:         smgo.RuneSpan{33, 52},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "StringAlias",
+						LocationSpan: newLocationSpan(6, 0, 7, 26),
+						Span:         smgo.RuneSpan{53, 79},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "Map",
+						LocationSpan: newLocationSpan(8, 0, 9, 25),
+						Span:         smgo.RuneSpan{80, 105},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "Array",
+						LocationSpan: newLocationSpan(10, 0, 11, 18),
+						Span:         smgo.RuneSpan{106, 124},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "Chan",
+						LocationSpan: newLocationSpan(12, 0, 13, 21),
+						Span:         smgo.RuneSpan{125, 146},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "Func",
+						LocationSpan: newLocationSpan(14, 0, 15, 23),
+						Span:         smgo.RuneSpan{147, 170},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "IntPointer",
+						LocationSpan: newLocationSpan(16, 0, 17, 21),
+						Span:         smgo.RuneSpan{171, 192},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "RedundantPar",
+						LocationSpan: newLocationSpan(18, 0, 19, 25),
+						Span:         smgo.RuneSpan{193, 218},
+					},
+					{
+						Type:         smgo.TypeNode,
+						Name:         "Reader",
+						LocationSpan: newLocationSpan(20, 0, 21, 22),
+						Span:         smgo.RuneSpan{219, 241},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "simple_var.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 5, 21),

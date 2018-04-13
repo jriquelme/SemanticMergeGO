@@ -41,6 +41,7 @@ const (
 	ImportNode
 	ConstNode
 	VarNode
+	TypeNode
 )
 
 type Node struct {
