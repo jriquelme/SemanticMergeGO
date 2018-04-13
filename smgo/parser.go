@@ -143,6 +143,14 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 				Node:      constNode,
 				Container: nil,
 			})
+		case token.VAR:
+			varNode := createVar(v.FileSet, n)
+			v.File.Nodes = append(v.File.Nodes, varNode)
+			v.Blocks = append(v.Blocks, block{
+				Type:      nodeBlock,
+				Node:      varNode,
+				Container: nil,
+			})
 		}
 		return nil
 	}
@@ -235,6 +243,15 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 	})
 
 	return container, blocks
+}
+
+func createVar(fset *token.FileSet, n *ast.ValueSpec) *Node {
+	return &Node{
+		Type:         VarNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromNode(fset, n),
+		Span:         runeSpanFromNode(fset, n),
+	}
 }
 
 func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
