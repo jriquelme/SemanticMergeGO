@@ -133,6 +133,18 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 			Container: nil,
 		})
 		return nil
+	case *ast.ValueSpec:
+		switch v.GenDecl.Tok {
+		case token.CONST:
+			constNode := createConst(v.FileSet, n)
+			v.File.Nodes = append(v.File.Nodes, constNode)
+			v.Blocks = append(v.Blocks, block{
+				Type:      nodeBlock,
+				Node:      constNode,
+				Container: nil,
+			})
+		}
+		return nil
 	}
 	return nil
 }
@@ -155,6 +167,15 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 				Span: runeSpanFromPositions(fset, n.Package, n.Name.End()),
 			},
 		},
+	}
+}
+
+func createConst(fset *token.FileSet, n *ast.ValueSpec) *Node {
+	return &Node{
+		Type:         ConstNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
+		Span:         runeSpanFromNode(fset, n),
 	}
 }
 
