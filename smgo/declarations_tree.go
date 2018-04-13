@@ -39,6 +39,7 @@ const (
 	FieldNode
 	ImportNode
 	ConstNode
+	VarNode
 )
 
 type Node struct {

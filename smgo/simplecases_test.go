@@ -178,6 +178,35 @@ func TestParseSimpleCases(t *testing.T) {
 				ParsingErrors: nil,
 			},
 		},
+		{
+			Src: "simple_var.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 5, 21),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers:   nil,
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simplevar",
+						LocationSpan: newLocationSpan(1, 0, 1, 18),
+						Span:         smgo.RuneSpan{0, 17},
+					},
+					{
+						Type:         smgo.VarNode,
+						Name:         "X",
+						LocationSpan: newLocationSpan(2, 0, 3, 10),
+						Span:         smgo.RuneSpan{18, 28},
+					},
+					{
+						Type:         smgo.VarNode,
+						Name:         "Z",
+						LocationSpan: newLocationSpan(4, 0, 5, 21),
+						Span:         smgo.RuneSpan{29, 50},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
 	}
 	for _, simpleCase := range simpleCases {
 		name := simpleCase.Src[len("simple_"):strings.LastIndex(simpleCase.Src, ".")]
