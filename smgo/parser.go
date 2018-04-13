@@ -114,6 +114,15 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.TypeSpec:
 		switch n.Type.(type) {
+		case *ast.InterfaceType:
+			container, blocks := createInterface(v.FileSet, n)
+			if v.GenDecl.Lparen == token.NoPos {
+				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
+				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
+			}
+			v.File.Containers = append(v.File.Containers, container)
+			v.Blocks = append(v.Blocks, blocks...)
+			return nil
 		case *ast.StructType:
 			container, blocks := createStruct(v.FileSet, n)
 			if v.GenDecl.Lparen == token.NoPos {
@@ -194,6 +203,55 @@ func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Node {
 		LocationSpan: locationSpanFromNode(fset, n),
 		Span:         runeSpanFromNode(fset, n),
 	}
+}
+
+func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []block) {
+	st, ok := typeSpec.Type.(*ast.InterfaceType)
+	if !ok {
+		panic("*ast.InterfaceType expected")
+	}
+
+	blocks := make([]block, 0, len(st.Methods.List)+2)
+	container := &Container{
+		Type:         InterfaceContainer,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromNode(fset, typeSpec),
+		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Methods.Opening),
+		FooterSpan:   runeSpanFromPositions(fset, st.Methods.Closing, st.Methods.Closing),
+		Containers:   nil,
+		Nodes:        make([]*Node, 0, len(st.Methods.List)),
+	}
+	blocks = append(blocks, block{
+		Type:      containerHeader,
+		Container: container,
+	})
+
+	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.Field:
+			field := &Node{
+				Type:         FunctionNode,
+				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
+				LocationSpan: locationSpanFromNode(fset, n),
+				Span:         runeSpanFromNode(fset, n),
+			}
+			container.Nodes = append(container.Nodes, field)
+			blocks = append(blocks, block{
+				Type: nodeBlock,
+				Node: field,
+			})
+			return false
+		default:
+			return true
+		}
+	})
+
+	blocks = append(blocks, block{
+		Type:      containerFooter,
+		Container: container,
+	})
+
+	return container, blocks
 }
 
 func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []block) {
