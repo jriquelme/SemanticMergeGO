@@ -117,10 +117,7 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 		case *ast.StructType:
 			container, blocks := createStruct(v.FileSet, n)
 			if v.GenDecl.Lparen == token.NoPos {
-				container.LocationSpan.Start = Location{
-					Line:   v.FileSet.Position(v.GenDecl.Pos()).Line,
-					Column: v.FileSet.Position(v.GenDecl.Pos()).Column,
-				}
+				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
 				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
 			}
 			v.File.Containers = append(v.File.Containers, container)
@@ -142,16 +139,7 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 
 func createFile(fset *token.FileSet, n *ast.File) *File {
 	return &File{
-		LocationSpan: LocationSpan{
-			Start: Location{
-				Line:   fset.Position(n.Pos()).Line,
-				Column: fset.Position(n.Pos()).Column,
-			},
-			End: Location{
-				Line:   fset.Position(n.End()).Line,
-				Column: fset.Position(n.End()).Column,
-			},
-		},
+		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
 		FooterSpan: RuneSpan{
 			Start: 0,
 			End:   -1,
@@ -161,14 +149,8 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 				Type: PackageNode,
 				Name: n.Name.Name,
 				LocationSpan: LocationSpan{
-					Start: Location{
-						Line:   fset.Position(n.Package).Line,
-						Column: fset.Position(n.Package).Column,
-					},
-					End: Location{
-						Line:   fset.Position(n.Name.Pos()).Line,
-						Column: fset.Position(n.Name.End()).Column,
-					},
+					Start: locationFromPosition(fset, n.Package),
+					End:   locationFromPositions(fset, n.Name.Pos(), n.Name.End()),
 				},
 				Span: RuneSpan{
 					Start: fset.Position(n.Package).Offset,
@@ -181,18 +163,9 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 
 func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Node {
 	return &Node{
-		Type: FunctionNode,
-		Name: n.Name.Name,
-		LocationSpan: LocationSpan{
-			Start: Location{
-				Line:   fset.Position(n.Pos()).Line,
-				Column: fset.Position(n.Pos()).Column,
-			},
-			End: Location{
-				Line:   fset.Position(n.End()).Line,
-				Column: fset.Position(n.End()).Column,
-			},
-		},
+		Type:         FunctionNode,
+		Name:         n.Name.Name,
+		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
 		Span: RuneSpan{
 			Start: fset.Position(n.Pos()).Offset,
 			End:   fset.Position(n.End()).Offset,
@@ -208,18 +181,9 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 
 	blocks := make([]block, 0, len(st.Fields.List)+2)
 	container := &Container{
-		Type: StructContainer,
-		Name: typeSpec.Name.Name,
-		LocationSpan: LocationSpan{
-			Start: Location{
-				Line:   fset.Position(typeSpec.Pos()).Line,
-				Column: fset.Position(typeSpec.Pos()).Column,
-			},
-			End: Location{
-				Line:   fset.Position(typeSpec.End()).Line,
-				Column: fset.Position(typeSpec.End()).Column,
-			},
-		},
+		Type:         StructContainer,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromPositions(fset, typeSpec.Pos(), typeSpec.End()),
 		HeaderSpan: RuneSpan{
 			Start: fset.Position(typeSpec.Pos()).Offset,
 			End:   fset.Position(st.Fields.Opening).Offset,
@@ -240,18 +204,9 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 		switch n := node.(type) {
 		case *ast.Field:
 			field := &Node{
-				Type: FieldNode,
-				Name: n.Names[0].Name, // FIXME: won't work with anonymous fields
-				LocationSpan: LocationSpan{
-					Start: Location{
-						Line:   fset.Position(n.Pos()).Line,
-						Column: fset.Position(n.Pos()).Column,
-					},
-					End: Location{
-						Line:   fset.Position(n.End()).Line,
-						Column: fset.Position(n.End()).Column,
-					},
-				},
+				Type:         FieldNode,
+				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
+				LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
 				Span: RuneSpan{
 					Start: fset.Position(n.Pos()).Offset,
 					End:   fset.Position(n.End()).Offset,
@@ -285,21 +240,33 @@ func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
 		panic("Unknown token type for import Path")
 	}
 	return &Node{
-		Type: ImportNode,
-		Name: name,
-		LocationSpan: LocationSpan{
-			Start: Location{
-				Line:   fset.Position(n.Pos()).Line,
-				Column: fset.Position(n.Pos()).Column,
-			},
-			End: Location{
-				Line:   fset.Position(n.End()).Line,
-				Column: fset.Position(n.End()).Column,
-			},
-		},
+		Type:         ImportNode,
+		Name:         name,
+		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
 		Span: RuneSpan{
 			Start: fset.Position(n.Pos()).Offset,
 			End:   fset.Position(n.End()).Offset,
 		},
+	}
+}
+
+func locationFromPosition(fset *token.FileSet, pos token.Pos) Location {
+	return Location{
+		Line:   fset.Position(pos).Line,
+		Column: fset.Position(pos).Column,
+	}
+}
+
+func locationFromPositions(fset *token.FileSet, pos1, pos2 token.Pos) Location {
+	return Location{
+		Line:   fset.Position(pos1).Line,
+		Column: fset.Position(pos2).Column,
+	}
+}
+
+func locationSpanFromPositions(fset *token.FileSet, pos1, pos2 token.Pos) LocationSpan {
+	return LocationSpan{
+		Start: locationFromPosition(fset, pos1),
+		End:   locationFromPosition(fset, pos2),
 	}
 }
