@@ -3,6 +3,7 @@ package smgo_test
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -52,183 +53,147 @@ func TestParseEmpty(t *testing.T) {
 	}
 }
 
-func TestParseSimpleConst(t *testing.T) {
+func TestParseSimpleCases(t *testing.T) {
 	t.Parallel()
 	if testing.Verbose() {
 		smgo.PrintBlocks = true
 	}
 
-	simpleConst, err := os.Open("testdata/simple_const.go")
-	require.Nil(t, err)
-	defer simpleConst.Close()
-
-	file, err := smgo.Parse(simpleConst, "UTF-8")
-	assert.NotNil(t, file)
-	assert.Nil(t, err)
-
-	assert.Equal(t, &smgo.File{
-		LocationSpan: newLocationSpan(1, 0, 5, 25),
-		FooterSpan:   smgo.RuneSpan{0, -1},
-		Containers:   nil,
-		Nodes: []*smgo.Node{
-			{
-				Type:         smgo.PackageNode,
-				Name:         "simpleconst",
-				LocationSpan: newLocationSpan(1, 0, 1, 20),
-				Span:         smgo.RuneSpan{0, 19},
-			},
-			{
-				Type:         smgo.ConstNode,
-				Name:         "N",
-				LocationSpan: newLocationSpan(2, 0, 3, 12),
-				Span:         smgo.RuneSpan{20, 32},
-			},
-			{
-				Type:         smgo.ConstNode,
-				Name:         "Name",
-				LocationSpan: newLocationSpan(4, 0, 5, 25),
-				Span:         smgo.RuneSpan{33, 58},
-			},
-		},
-		ParsingErrors: nil,
-	}, file)
-	if t.Failed() {
-		spew.Dump(t.Name(), file)
-	}
-}
-
-func TestParseSimpleFunc(t *testing.T) {
-	t.Parallel()
-	if testing.Verbose() {
-		smgo.PrintBlocks = true
-	}
-
-	simpleFunc, err := os.Open("testdata/simple_func.go")
-	require.Nil(t, err)
-	defer simpleFunc.Close()
-
-	file, err := smgo.Parse(simpleFunc, "UTF-8")
-	assert.NotNil(t, file)
-	assert.Nil(t, err)
-
-	assert.Equal(t, &smgo.File{
-		LocationSpan: newLocationSpan(1, 0, 5, 2),
-		FooterSpan:   smgo.RuneSpan{0, -1},
-		Containers:   nil,
-		Nodes: []*smgo.Node{
-			{
-				Type:         smgo.PackageNode,
-				Name:         "simplefunc",
-				LocationSpan: newLocationSpan(1, 0, 1, 19),
-				Span:         smgo.RuneSpan{0, 18},
-			},
-			{
-				Type:         smgo.FunctionNode,
-				Name:         "Hi",
-				LocationSpan: newLocationSpan(2, 0, 5, 2),
-				Span:         smgo.RuneSpan{19, 47},
-			},
-		},
-		ParsingErrors: nil,
-	}, file)
-	if t.Failed() {
-		spew.Dump(t.Name(), file)
-	}
-}
-
-func TestParseSimpleImport(t *testing.T) {
-	t.Parallel()
-	if testing.Verbose() {
-		smgo.PrintBlocks = true
-	}
-
-	simpleImport, err := os.Open("testdata/simple_import.go_src")
-	require.Nil(t, err)
-	defer simpleImport.Close()
-
-	file, err := smgo.Parse(simpleImport, "UTF-8")
-	assert.NotNil(t, file)
-	assert.Nil(t, err)
-
-	assert.Equal(t, &smgo.File{
-		LocationSpan: newLocationSpan(1, 0, 3, 13),
-		FooterSpan:   smgo.RuneSpan{0, -1},
-		Containers:   nil,
-		Nodes: []*smgo.Node{
-			{
-				Type:         smgo.PackageNode,
-				Name:         "simpleimport",
-				LocationSpan: newLocationSpan(1, 0, 1, 21),
-				Span:         smgo.RuneSpan{0, 20},
-			},
-			{
-				Type:         smgo.ImportNode,
-				Name:         "fmt",
-				LocationSpan: newLocationSpan(2, 0, 3, 13),
-				Span:         smgo.RuneSpan{21, 34},
-			},
-		},
-		ParsingErrors: nil,
-	}, file)
-	if t.Failed() {
-		spew.Dump(t.Name(), file)
-	}
-
-}
-
-func TestParseSimpleStruct(t *testing.T) {
-	t.Parallel()
-	if testing.Verbose() {
-		smgo.PrintBlocks = true
-	}
-
-	simpleStruct, err := os.Open("testdata/simple_struct.go")
-	require.Nil(t, err)
-	defer simpleStruct.Close()
-
-	file, err := smgo.Parse(simpleStruct, "UTF-8")
-	assert.NotNil(t, file)
-	assert.Nil(t, err)
-
-	assert.Equal(t, &smgo.File{
-		LocationSpan: newLocationSpan(1, 0, 9, 2),
-		FooterSpan:   smgo.RuneSpan{0, -1},
-		Containers: []*smgo.Container{
-			{
-				Type:         smgo.StructContainer,
-				Name:         "Person",
-				LocationSpan: newLocationSpan(2, 0, 5, 2),
-				HeaderSpan:   smgo.RuneSpan{21, 42},
-				FooterSpan:   smgo.RuneSpan{56, 57},
+	simpleCases := []struct {
+		Src          string
+		ExpectedFile *smgo.File
+	}{
+		{
+			Src: "simple_const.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 5, 25),
+				FooterSpan:   smgo.RuneSpan{0, -1},
 				Containers:   nil,
 				Nodes: []*smgo.Node{
 					{
-						Type:         smgo.FieldNode,
+						Type:         smgo.PackageNode,
+						Name:         "simpleconst",
+						LocationSpan: newLocationSpan(1, 0, 1, 20),
+						Span:         smgo.RuneSpan{0, 19},
+					},
+					{
+						Type:         smgo.ConstNode,
+						Name:         "N",
+						LocationSpan: newLocationSpan(2, 0, 3, 12),
+						Span:         smgo.RuneSpan{20, 32},
+					},
+					{
+						Type:         smgo.ConstNode,
 						Name:         "Name",
-						LocationSpan: newLocationSpan(4, 0, 4, 13),
-						Span:         smgo.RuneSpan{43, 55},
+						LocationSpan: newLocationSpan(4, 0, 5, 25),
+						Span:         smgo.RuneSpan{33, 58},
 					},
 				},
+				ParsingErrors: nil,
 			},
 		},
-		Nodes: []*smgo.Node{
-			{
-				Type:         smgo.PackageNode,
-				Name:         "simplestruct",
-				LocationSpan: newLocationSpan(1, 0, 1, 21),
-				Span:         smgo.RuneSpan{0, 20},
-			},
-			{
-				Type:         smgo.FunctionNode,
-				Name:         "SayHi",
-				LocationSpan: newLocationSpan(6, 0, 9, 2),
-				Span:         smgo.RuneSpan{58, 115},
+		{
+			Src: "simple_func.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 5, 2),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers:   nil,
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simplefunc",
+						LocationSpan: newLocationSpan(1, 0, 1, 19),
+						Span:         smgo.RuneSpan{0, 18},
+					},
+					{
+						Type:         smgo.FunctionNode,
+						Name:         "Hi",
+						LocationSpan: newLocationSpan(2, 0, 5, 2),
+						Span:         smgo.RuneSpan{19, 47},
+					},
+				},
+				ParsingErrors: nil,
 			},
 		},
-		ParsingErrors: nil,
-	}, file)
-	if t.Failed() {
-		spew.Dump(t.Name(), file)
+		{
+			Src: "simple_import.go_src",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 3, 13),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers:   nil,
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simpleimport",
+						LocationSpan: newLocationSpan(1, 0, 1, 21),
+						Span:         smgo.RuneSpan{0, 20},
+					},
+					{
+						Type:         smgo.ImportNode,
+						Name:         "fmt",
+						LocationSpan: newLocationSpan(2, 0, 3, 13),
+						Span:         smgo.RuneSpan{21, 34},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
+			Src: "simple_struct.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 9, 2),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers: []*smgo.Container{
+					{
+						Type:         smgo.StructContainer,
+						Name:         "Person",
+						LocationSpan: newLocationSpan(2, 0, 5, 2),
+						HeaderSpan:   smgo.RuneSpan{21, 42},
+						FooterSpan:   smgo.RuneSpan{56, 57},
+						Containers:   nil,
+						Nodes: []*smgo.Node{
+							{
+								Type:         smgo.FieldNode,
+								Name:         "Name",
+								LocationSpan: newLocationSpan(4, 0, 4, 13),
+								Span:         smgo.RuneSpan{43, 55},
+							},
+						},
+					},
+				},
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simplestruct",
+						LocationSpan: newLocationSpan(1, 0, 1, 21),
+						Span:         smgo.RuneSpan{0, 20},
+					},
+					{
+						Type:         smgo.FunctionNode,
+						Name:         "SayHi",
+						LocationSpan: newLocationSpan(6, 0, 9, 2),
+						Span:         smgo.RuneSpan{58, 115},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
 	}
+	for _, simpleCase := range simpleCases {
+		name := simpleCase.Src[len("simple_"):strings.LastIndex(simpleCase.Src, ".")]
+		t.Run(name, func(t *testing.T) {
+			srcFile, err := os.Open("testdata/" + simpleCase.Src)
+			require.Nil(t, err)
+			defer srcFile.Close()
 
+			file, err := smgo.Parse(srcFile, "UTF-8")
+			assert.NotNil(t, file)
+			assert.Nil(t, err)
+
+			assert.Equal(t, simpleCase.ExpectedFile, file)
+			if t.Failed() {
+				spew.Dump(t.Name(), file)
+			}
+		})
+	}
 }
