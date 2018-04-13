@@ -152,10 +152,7 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 					Start: locationFromPosition(fset, n.Package),
 					End:   locationFromPositions(fset, n.Name.Pos(), n.Name.End()),
 				},
-				Span: RuneSpan{
-					Start: fset.Position(n.Package).Offset,
-					End:   fset.Position(n.Name.End()).Offset,
-				},
+				Span: runeSpanFromPositions(fset, n.Package, n.Name.End()),
 			},
 		},
 	}
@@ -166,10 +163,7 @@ func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Node {
 		Type:         FunctionNode,
 		Name:         n.Name.Name,
 		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
-		Span: RuneSpan{
-			Start: fset.Position(n.Pos()).Offset,
-			End:   fset.Position(n.End()).Offset,
-		},
+		Span:         runeSpanFromNode(fset, n),
 	}
 }
 
@@ -184,16 +178,10 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 		Type:         StructContainer,
 		Name:         typeSpec.Name.Name,
 		LocationSpan: locationSpanFromPositions(fset, typeSpec.Pos(), typeSpec.End()),
-		HeaderSpan: RuneSpan{
-			Start: fset.Position(typeSpec.Pos()).Offset,
-			End:   fset.Position(st.Fields.Opening).Offset,
-		},
-		FooterSpan: RuneSpan{
-			Start: fset.Position(st.Fields.Closing).Offset,
-			End:   fset.Position(st.Fields.Closing).Offset,
-		},
-		Containers: nil,
-		Nodes:      make([]*Node, 0, len(st.Fields.List)),
+		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Fields.Opening),
+		FooterSpan:   runeSpanFromPositions(fset, st.Fields.Closing, st.Fields.Closing),
+		Containers:   nil,
+		Nodes:        make([]*Node, 0, len(st.Fields.List)),
 	}
 	blocks = append(blocks, block{
 		Type:      containerHeader,
@@ -207,10 +195,7 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 				Type:         FieldNode,
 				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
 				LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
-				Span: RuneSpan{
-					Start: fset.Position(n.Pos()).Offset,
-					End:   fset.Position(n.End()).Offset,
-				},
+				Span:         runeSpanFromNode(fset, n),
 			}
 			container.Nodes = append(container.Nodes, field)
 			blocks = append(blocks, block{
@@ -243,10 +228,7 @@ func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
 		Type:         ImportNode,
 		Name:         name,
 		LocationSpan: locationSpanFromPositions(fset, n.Pos(), n.End()),
-		Span: RuneSpan{
-			Start: fset.Position(n.Pos()).Offset,
-			End:   fset.Position(n.End()).Offset,
-		},
+		Span:         runeSpanFromNode(fset, n),
 	}
 }
 
@@ -268,5 +250,19 @@ func locationSpanFromPositions(fset *token.FileSet, pos1, pos2 token.Pos) Locati
 	return LocationSpan{
 		Start: locationFromPosition(fset, pos1),
 		End:   locationFromPosition(fset, pos2),
+	}
+}
+
+func runeSpanFromNode(fset *token.FileSet, n ast.Node) RuneSpan {
+	return RuneSpan{
+		Start: fset.Position(n.Pos()).Offset,
+		End:   fset.Position(n.End()).Offset,
+	}
+}
+
+func runeSpanFromPositions(fset *token.FileSet, pos1, pos2 token.Pos) RuneSpan {
+	return RuneSpan{
+		Start: fset.Position(pos1).Offset,
+		End:   fset.Position(pos2).Offset,
 	}
 }
