@@ -139,6 +139,40 @@ func TestParseSimpleCases(t *testing.T) {
 			},
 		},
 		{
+			Src: "simple_interface.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 5, 2),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Containers: []*smgo.Container{
+					{
+						Type:         smgo.InterfaceContainer,
+						Name:         "Figure",
+						LocationSpan: newLocationSpan(2, 0, 5, 2),
+						HeaderSpan:   smgo.RuneSpan{24, 48},
+						FooterSpan:   smgo.RuneSpan{65, 66},
+						Containers:   nil,
+						Nodes: []*smgo.Node{
+							{
+								Type:         smgo.FunctionNode,
+								Name:         "Area",
+								LocationSpan: newLocationSpan(4, 0, 4, 16),
+								Span:         smgo.RuneSpan{49, 64},
+							},
+						},
+					},
+				},
+				Nodes: []*smgo.Node{
+					{
+						Type:         smgo.PackageNode,
+						Name:         "simpleinterface",
+						LocationSpan: newLocationSpan(1, 0, 1, 24),
+						Span:         smgo.RuneSpan{0, 23},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "simple_struct.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 9, 2),

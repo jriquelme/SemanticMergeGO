@@ -17,6 +17,7 @@ type ContainerType int
 
 const (
 	StructContainer ContainerType = iota
+	InterfaceContainer
 )
 
 type Container struct {

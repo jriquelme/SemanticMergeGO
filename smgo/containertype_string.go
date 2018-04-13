@@ -4,9 +4,9 @@ package smgo
 
 import "strconv"
 
-const _ContainerType_name = "StructContainer"
+const _ContainerType_name = "StructContainerInterfaceContainer"
 
-var _ContainerType_index = [...]uint8{0, 15}
+var _ContainerType_index = [...]uint8{0, 15, 33}
 
 func (i ContainerType) String() string {
 	if i < 0 || i >= ContainerType(len(_ContainerType_index)-1) {
