@@ -2,3 +2,5 @@
 
 Check the [SemanticMerge Documentation](https://users.semanticmerge.com/documentation/external-parsers/external-parsers-guide.shtml)
 for a detailed description.
+
+**Work in progress.**
