@@ -52,6 +52,51 @@ func TestParseEmpty(t *testing.T) {
 	}
 }
 
+func TestParseSimpleConst(t *testing.T) {
+	t.Parallel()
+	if testing.Verbose() {
+		smgo.PrintBlocks = true
+	}
+
+	simpleConst, err := os.Open("testdata/simple_const.go")
+	require.Nil(t, err)
+	defer simpleConst.Close()
+
+	file, err := smgo.Parse(simpleConst, "UTF-8")
+	assert.NotNil(t, file)
+	assert.Nil(t, err)
+
+	assert.Equal(t, &smgo.File{
+		LocationSpan: newLocationSpan(1, 0, 5, 25),
+		FooterSpan:   smgo.RuneSpan{0, -1},
+		Containers:   nil,
+		Nodes: []*smgo.Node{
+			{
+				Type:         smgo.PackageNode,
+				Name:         "simpleconst",
+				LocationSpan: newLocationSpan(1, 0, 1, 20),
+				Span:         smgo.RuneSpan{0, 19},
+			},
+			{
+				Type:         smgo.ConstNode,
+				Name:         "N",
+				LocationSpan: newLocationSpan(2, 0, 3, 12),
+				Span:         smgo.RuneSpan{20, 32},
+			},
+			{
+				Type:         smgo.ConstNode,
+				Name:         "Name",
+				LocationSpan: newLocationSpan(4, 0, 5, 25),
+				Span:         smgo.RuneSpan{33, 58},
+			},
+		},
+		ParsingErrors: nil,
+	}, file)
+	if t.Failed() {
+		spew.Dump(t.Name(), file)
+	}
+}
+
 func TestParseSimpleFunc(t *testing.T) {
 	t.Parallel()
 	if testing.Verbose() {

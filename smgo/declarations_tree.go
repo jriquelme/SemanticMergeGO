@@ -38,6 +38,7 @@ const (
 	FunctionNode
 	FieldNode
 	ImportNode
+	ConstNode
 )
 
 type Node struct {
