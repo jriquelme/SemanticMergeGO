@@ -132,6 +132,15 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 			v.File.Containers = append(v.File.Containers, container)
 			v.Blocks = append(v.Blocks, blocks...)
 			return nil
+		default:
+			typeNode := createType(v.FileSet, n)
+			v.File.Nodes = append(v.File.Nodes, typeNode)
+			v.Blocks = append(v.Blocks, block{
+				Type:      nodeBlock,
+				Node:      typeNode,
+				Container: nil,
+			})
+			return nil
 		}
 	case *ast.ImportSpec:
 		importNode := createImport(v.FileSet, n)
@@ -301,6 +310,15 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 	})
 
 	return container, blocks
+}
+
+func createType(fset *token.FileSet, n *ast.TypeSpec) *Node {
+	return &Node{
+		Type:         TypeNode,
+		Name:         n.Name.Name,
+		LocationSpan: locationSpanFromNode(fset, n),
+		Span:         runeSpanFromNode(fset, n),
+	}
 }
 
 func createVar(fset *token.FileSet, n *ast.ValueSpec) *Node {
