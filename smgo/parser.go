@@ -81,9 +81,8 @@ func (v *fileVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.File:
 		v.File = createFile(v.FileSet, n)
 		v.Blocks = append(v.Blocks, block{
-			Type:      nodeBlock,
-			Node:      v.File.Nodes[0],
-			Container: nil,
+			Type: nodeBlock,
+			Node: v.File.Children[0],
 		})
 		return v
 	case *ast.GenDecl:
@@ -93,11 +92,10 @@ func (v *fileVisitor) Visit(node ast.Node) ast.Visitor {
 		}
 	case *ast.FuncDecl:
 		funcNode := createFunc(v.FileSet, n)
-		v.File.Nodes = append(v.File.Nodes, funcNode)
+		v.File.Children = append(v.File.Children, funcNode)
 		v.Blocks = append(v.Blocks, block{
-			Type:      nodeBlock,
-			Node:      funcNode,
-			Container: nil,
+			Type: nodeBlock,
+			Node: funcNode,
 		})
 		return nil
 	default:
@@ -120,7 +118,7 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
 				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
 			}
-			v.File.Containers = append(v.File.Containers, container)
+			v.File.Children = append(v.File.Children, container)
 			v.Blocks = append(v.Blocks, blocks...)
 			return nil
 		case *ast.StructType:
@@ -129,45 +127,41 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
 				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
 			}
-			v.File.Containers = append(v.File.Containers, container)
+			v.File.Children = append(v.File.Children, container)
 			v.Blocks = append(v.Blocks, blocks...)
 			return nil
 		default:
 			typeNode := createType(v.FileSet, n)
-			v.File.Nodes = append(v.File.Nodes, typeNode)
+			v.File.Children = append(v.File.Children, typeNode)
 			v.Blocks = append(v.Blocks, block{
-				Type:      nodeBlock,
-				Node:      typeNode,
-				Container: nil,
+				Type: nodeBlock,
+				Node: typeNode,
 			})
 			return nil
 		}
 	case *ast.ImportSpec:
 		importNode := createImport(v.FileSet, n)
-		v.File.Nodes = append(v.File.Nodes, importNode)
+		v.File.Children = append(v.File.Children, importNode)
 		v.Blocks = append(v.Blocks, block{
-			Type:      nodeBlock,
-			Node:      importNode,
-			Container: nil,
+			Type: nodeBlock,
+			Node: importNode,
 		})
 		return nil
 	case *ast.ValueSpec:
 		switch v.GenDecl.Tok {
 		case token.CONST:
 			constNode := createConst(v.FileSet, n)
-			v.File.Nodes = append(v.File.Nodes, constNode)
+			v.File.Children = append(v.File.Children, constNode)
 			v.Blocks = append(v.Blocks, block{
-				Type:      nodeBlock,
-				Node:      constNode,
-				Container: nil,
+				Type: nodeBlock,
+				Node: constNode,
 			})
 		case token.VAR:
 			varNode := createVar(v.FileSet, n)
-			v.File.Nodes = append(v.File.Nodes, varNode)
+			v.File.Children = append(v.File.Children, varNode)
 			v.Blocks = append(v.Blocks, block{
-				Type:      nodeBlock,
-				Node:      varNode,
-				Container: nil,
+				Type: nodeBlock,
+				Node: varNode,
 			})
 		}
 		return nil
@@ -182,8 +176,8 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 			Start: 0,
 			End:   -1,
 		},
-		Nodes: []*Node{
-			{
+		Children: []Node{
+			&Terminal{
 				Type: PackageNode,
 				Name: n.Name.Name,
 				LocationSpan: LocationSpan{
@@ -196,8 +190,8 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 	}
 }
 
-func createConst(fset *token.FileSet, n *ast.ValueSpec) *Node {
-	return &Node{
+func createConst(fset *token.FileSet, n *ast.ValueSpec) *Terminal {
+	return &Terminal{
 		Type:         ConstNode,
 		Name:         n.Names[0].Name,
 		LocationSpan: locationSpanFromNode(fset, n),
@@ -205,8 +199,8 @@ func createConst(fset *token.FileSet, n *ast.ValueSpec) *Node {
 	}
 }
 
-func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Node {
-	return &Node{
+func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Terminal {
+	return &Terminal{
 		Type:         FunctionNode,
 		Name:         n.Name.Name,
 		LocationSpan: locationSpanFromNode(fset, n),
@@ -222,29 +216,28 @@ func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, [
 
 	blocks := make([]block, 0, len(st.Methods.List)+2)
 	container := &Container{
-		Type:         InterfaceContainer,
+		Type:         InterfaceNode,
 		Name:         typeSpec.Name.Name,
 		LocationSpan: locationSpanFromNode(fset, typeSpec),
 		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Methods.Opening),
 		FooterSpan:   runeSpanFromPositions(fset, st.Methods.Closing, st.Methods.Closing),
-		Containers:   nil,
-		Nodes:        make([]*Node, 0, len(st.Methods.List)),
+		Children:     make([]Node, 0, len(st.Methods.List)),
 	}
 	blocks = append(blocks, block{
-		Type:      containerHeader,
-		Container: container,
+		Type: containerHeader,
+		Node: container,
 	})
 
 	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.Field:
-			field := &Node{
+			field := &Terminal{
 				Type:         FunctionNode,
 				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
 				LocationSpan: locationSpanFromNode(fset, n),
 				Span:         runeSpanFromNode(fset, n),
 			}
-			container.Nodes = append(container.Nodes, field)
+			container.Children = append(container.Children, field)
 			blocks = append(blocks, block{
 				Type: nodeBlock,
 				Node: field,
@@ -256,8 +249,8 @@ func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, [
 	})
 
 	blocks = append(blocks, block{
-		Type:      containerFooter,
-		Container: container,
+		Type: containerFooter,
+		Node: container,
 	})
 
 	return container, blocks
@@ -271,29 +264,28 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 
 	blocks := make([]block, 0, len(st.Fields.List)+2)
 	container := &Container{
-		Type:         StructContainer,
+		Type:         StructNode,
 		Name:         typeSpec.Name.Name,
 		LocationSpan: locationSpanFromNode(fset, typeSpec),
 		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Fields.Opening),
 		FooterSpan:   runeSpanFromPositions(fset, st.Fields.Closing, st.Fields.Closing),
-		Containers:   nil,
-		Nodes:        make([]*Node, 0, len(st.Fields.List)),
+		Children:     make([]Node, 0, len(st.Fields.List)),
 	}
 	blocks = append(blocks, block{
-		Type:      containerHeader,
-		Container: container,
+		Type: containerHeader,
+		Node: container,
 	})
 
 	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.Field:
-			field := &Node{
+			field := &Terminal{
 				Type:         FieldNode,
 				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
 				LocationSpan: locationSpanFromNode(fset, n),
 				Span:         runeSpanFromNode(fset, n),
 			}
-			container.Nodes = append(container.Nodes, field)
+			container.Children = append(container.Children, field)
 			blocks = append(blocks, block{
 				Type: nodeBlock,
 				Node: field,
@@ -305,15 +297,15 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 	})
 
 	blocks = append(blocks, block{
-		Type:      containerFooter,
-		Container: container,
+		Type: containerFooter,
+		Node: container,
 	})
 
 	return container, blocks
 }
 
-func createType(fset *token.FileSet, n *ast.TypeSpec) *Node {
-	return &Node{
+func createType(fset *token.FileSet, n *ast.TypeSpec) *Terminal {
+	return &Terminal{
 		Type:         TypeNode,
 		Name:         n.Name.Name,
 		LocationSpan: locationSpanFromNode(fset, n),
@@ -321,8 +313,8 @@ func createType(fset *token.FileSet, n *ast.TypeSpec) *Node {
 	}
 }
 
-func createVar(fset *token.FileSet, n *ast.ValueSpec) *Node {
-	return &Node{
+func createVar(fset *token.FileSet, n *ast.ValueSpec) *Terminal {
+	return &Terminal{
 		Type:         VarNode,
 		Name:         n.Names[0].Name,
 		LocationSpan: locationSpanFromNode(fset, n),
@@ -330,7 +322,7 @@ func createVar(fset *token.FileSet, n *ast.ValueSpec) *Node {
 	}
 }
 
-func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
+func createImport(fset *token.FileSet, n *ast.ImportSpec) *Terminal {
 	var name string
 	switch n.Path.Kind {
 	case token.STRING:
@@ -338,7 +330,7 @@ func createImport(fset *token.FileSet, n *ast.ImportSpec) *Node {
 	default:
 		panic("Unknown token type for import Path")
 	}
-	return &Node{
+	return &Terminal{
 		Type:         ImportNode,
 		Name:         name,
 		LocationSpan: locationSpanFromNode(fset, n),

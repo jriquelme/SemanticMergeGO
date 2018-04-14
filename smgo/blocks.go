@@ -18,9 +18,16 @@ const (
 )
 
 type block struct {
-	Type      blockType
-	Node      *Node
-	Container *Container
+	Type blockType
+	Node Node
+}
+
+func (b *block) Terminal() *Terminal {
+	return b.Node.(*Terminal)
+}
+
+func (b *block) Container() *Container {
+	return b.Node.(*Container)
 }
 
 func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
@@ -29,7 +36,7 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 	var pos int
 	switch blocks[0].Type {
 	case nodeBlock:
-		n := blocks[0].Node
+		n := blocks[0].Terminal()
 		n.LocationSpan.Start.Column = 0 // FIXME
 		pos = n.Span.End
 	default:
@@ -39,7 +46,7 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 	for _, b := range blocks[1:] {
 		switch b.Type {
 		case nodeBlock:
-			n := b.Node
+			n := b.Terminal()
 			n.LocationSpan.Start.Column = 0 // FIXME
 			b := src[pos+1 : n.Span.Start]
 			newLines := bytes.Count(b, []byte{0x0a})
@@ -48,7 +55,7 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 			n.LocationSpan.Start.Column = 0
 			pos = n.Span.End
 		case containerHeader:
-			n := b.Container
+			n := b.Container()
 			n.LocationSpan.Start.Column = 0 // FIXME
 			b := src[pos+1 : n.HeaderSpan.Start]
 			newLines := bytes.Count(b, []byte{0x0a})
@@ -58,7 +65,7 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 			n.LocationSpan.Start.Column = 0
 			pos = n.HeaderSpan.End
 		case containerFooter:
-			n := b.Container
+			n := b.Container()
 			n.LocationSpan.Start.Column = 0 // FIXME
 			b := src[pos+1 : n.FooterSpan.Start]
 			newLines := bytes.Count(b, []byte{0x0a})
@@ -86,21 +93,21 @@ func printBlocks(blocks []block) {
 		switch b.Type {
 		case nodeBlock:
 			debugBlocks = append(debugBlocks, debugBlock{
-				Name:         b.Node.Name,
-				LocationSpan: b.Node.LocationSpan,
-				Span:         b.Node.Span,
+				Name:         b.Terminal().Name,
+				LocationSpan: b.Terminal().LocationSpan,
+				Span:         b.Terminal().Span,
 			})
 		case containerHeader:
 			debugBlocks = append(debugBlocks, debugBlock{
-				Name:         b.Container.Name,
-				LocationSpan: b.Container.LocationSpan,
-				Span:         b.Container.HeaderSpan,
+				Name:         b.Container().Name,
+				LocationSpan: b.Container().LocationSpan,
+				Span:         b.Container().HeaderSpan,
 			})
 		case containerFooter:
 			debugBlocks = append(debugBlocks, debugBlock{
-				Name:         b.Container.Name,
-				LocationSpan: b.Container.LocationSpan,
-				Span:         b.Container.FooterSpan,
+				Name:         b.Container().Name,
+				LocationSpan: b.Container().LocationSpan,
+				Span:         b.Container().FooterSpan,
 			})
 		default:
 			panic("impossibru!")

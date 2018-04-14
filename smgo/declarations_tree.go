@@ -2,32 +2,16 @@ package smgo
 
 import "fmt"
 
+type Node interface {
+	IsTerminal() bool
+}
+
 // File is the root of the declarations tree.
 type File struct {
 	LocationSpan  LocationSpan
 	FooterSpan    RuneSpan
-	Containers    []*Container
-	Nodes         []*Node
+	Children      []Node
 	ParsingErrors []*ParsingError
-}
-
-type ContainerType int
-
-//go:generate stringer -type=ContainerType
-
-const (
-	StructContainer ContainerType = iota
-	InterfaceContainer
-)
-
-type Container struct {
-	Type         ContainerType
-	Name         string
-	LocationSpan LocationSpan
-	HeaderSpan   RuneSpan
-	FooterSpan   RuneSpan
-	Containers   []*Container
-	Nodes        []*Node
 }
 
 type NodeType int
@@ -42,13 +26,32 @@ const (
 	ConstNode
 	VarNode
 	TypeNode
+	StructNode
+	InterfaceNode
 )
 
-type Node struct {
+type Container struct {
+	Type         NodeType
+	Name         string
+	LocationSpan LocationSpan
+	HeaderSpan   RuneSpan
+	FooterSpan   RuneSpan
+	Children     []Node
+}
+
+func (c *Container) IsTerminal() bool {
+	return false
+}
+
+type Terminal struct {
 	Type         NodeType
 	Name         string
 	LocationSpan LocationSpan
 	Span         RuneSpan
+}
+
+func (t *Terminal) IsTerminal() bool {
+	return true
 }
 
 type ParsingError struct {
