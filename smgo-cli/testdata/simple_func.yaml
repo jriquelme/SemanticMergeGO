@@ -1,0 +1,14 @@
+type: file
+name: testdata/simple_func.go
+locationSpan: {end: [5, 2], start: [1, 0]}
+footerSpan: [0, -1]
+parsingErrorsDetected: false
+children:
+- type: Package
+  name: simplefunc
+  locationSpan: {end: [1, 19], start: [1, 0]}
+  span: [0, 18]
+- type: Function
+  name: Hi
+  locationSpan: {end: [5, 2], start: [2, 0]}
+  span: [19, 47]

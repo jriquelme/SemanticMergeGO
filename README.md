@@ -4,3 +4,14 @@ Check the [SemanticMerge Documentation](https://users.semanticmerge.com/document
 for a detailed description.
 
 **Work in progress.**
+
+## Development notes
+
+The package smgo-cli has some integration tests. Those tests run against the installed binary (which should be in
+`$GOPATH/bin/smgo-cli`); therefore the package has to be installed before executing the tests. Additionally, the build
+tag *itest* is used to run the integration tests explicitly:
+
+```bash
+$ go install ./...
+$ go test -tags="itest" -v ./smgo-cli
+```
