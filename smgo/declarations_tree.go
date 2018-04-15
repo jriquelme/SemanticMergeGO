@@ -2,9 +2,8 @@ package smgo
 
 import "fmt"
 
-type Node interface {
-	IsTerminal() bool
-}
+// Node is a Container or a Terminal instance.
+type Node interface{}
 
 // File is the root of the declarations tree.
 type File struct {
@@ -39,19 +38,11 @@ type Container struct {
 	Children     []Node
 }
 
-func (c *Container) IsTerminal() bool {
-	return false
-}
-
 type Terminal struct {
 	Type         NodeType
 	Name         string
 	LocationSpan LocationSpan
 	Span         RuneSpan
-}
-
-func (t *Terminal) IsTerminal() bool {
-	return true
 }
 
 type ParsingError struct {

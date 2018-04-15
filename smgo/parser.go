@@ -15,7 +15,7 @@ var PrintBlocks bool
 
 var ErrUnsupportedEncoding = errors.New("Unsupported encoding")
 
-// Parse parses the GO source code from the src io.ReadSeeker and returns a declarations tree *smgo.File.
+// Parse parses the GO source code from src and returns a *smgo.File declarations tree.
 func Parse(src io.Reader, encoding string) (*File, error) {
 	srcBytes, err := ioutil.ReadAll(src)
 	if err != nil {
