@@ -7,9 +7,9 @@ for a detailed description.
 
 ## Development notes
 
-The package smgo-cli has some integration tests. Those tests run against the installed binary (which should be in
-`$GOPATH/bin/smgo-cli`); therefore the package has to be installed before executing the tests. Additionally, the build
-tag *itest* is used to run the integration tests explicitly:
+The package smgo-cli has some integration tests. Those tests run against the binary in `$GOPATH/bin/smgo-cli`; therefore
+the package has to be installed before executing the tests. Additionally, the build tag *itest* is used to run the
+integration tests explicitly:
 
 ```bash
 $ go install ./...
