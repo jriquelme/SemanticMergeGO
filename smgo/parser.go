@@ -11,8 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var PrintBlocks bool
-
 var ErrUnsupportedEncoding = errors.New("Unsupported encoding")
 
 // Parse parses the GO source code from src and returns a *smgo.File declarations tree.
@@ -52,15 +50,9 @@ func Parse(src io.Reader, encoding string) (*File, error) {
 	}
 	ast.Walk(fv, srcAST)
 
-	if PrintBlocks {
-		printBlocks(fv.Blocks)
-	}
-	err = fixBlockBoundaries(fv.File, fv.Blocks, srcBytes)
+	err = fixBlockBoundaries(fv.File, srcBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading fixing boundaries")
-	}
-	if PrintBlocks {
-		printBlocks(fv.Blocks)
 	}
 
 	return fv.File, nil
@@ -69,7 +61,11 @@ func Parse(src io.Reader, encoding string) (*File, error) {
 type parserState struct {
 	FileSet *token.FileSet
 	File    *File
-	Blocks  []block
+}
+
+type parentNode interface {
+	AddNode(node Node)
+	Nodes() []Node
 }
 
 type fileVisitor struct {
@@ -80,23 +76,31 @@ func (v *fileVisitor) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.File:
 		v.File = createFile(v.FileSet, n)
-		v.Blocks = append(v.Blocks, block{
-			Type: nodeBlock,
-			Node: v.File.Children[0],
-		})
 		return v
 	case *ast.GenDecl:
+		var parent parentNode = v.File
+		if n.Lparen != token.NoPos {
+			switch n.Tok {
+			case token.CONST:
+				parent = &Container{
+					Type:         ConstNode,
+					Name:         "const",
+					LocationSpan: locationSpanFromNode(v.FileSet, n),
+					HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
+					FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.Rparen),
+					Children:     make([]Node, 0, len(n.Specs)),
+				}
+				v.File.AddNode(parent)
+			}
+		}
 		return &genDeclVisitor{
 			parserState: v.parserState,
 			GenDecl:     n,
+			Parent:      parent,
 		}
 	case *ast.FuncDecl:
 		funcNode := createFunc(v.FileSet, n)
-		v.File.Children = append(v.File.Children, funcNode)
-		v.Blocks = append(v.Blocks, block{
-			Type: nodeBlock,
-			Node: funcNode,
-		})
+		v.File.AddNode(funcNode)
 		return nil
 	default:
 		return nil
@@ -106,6 +110,7 @@ func (v *fileVisitor) Visit(node ast.Node) ast.Visitor {
 type genDeclVisitor struct {
 	*parserState
 	GenDecl *ast.GenDecl
+	Parent  parentNode
 }
 
 func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
@@ -113,56 +118,38 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.TypeSpec:
 		switch n.Type.(type) {
 		case *ast.InterfaceType:
-			container, blocks := createInterface(v.FileSet, n)
+			container := createInterface(v.FileSet, n)
 			if v.GenDecl.Lparen == token.NoPos {
 				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
 				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
 			}
-			v.File.Children = append(v.File.Children, container)
-			v.Blocks = append(v.Blocks, blocks...)
+			v.Parent.AddNode(container)
 			return nil
 		case *ast.StructType:
-			container, blocks := createStruct(v.FileSet, n)
+			container := createStruct(v.FileSet, n)
 			if v.GenDecl.Lparen == token.NoPos {
 				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
 				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
 			}
-			v.File.Children = append(v.File.Children, container)
-			v.Blocks = append(v.Blocks, blocks...)
+			v.Parent.AddNode(container)
 			return nil
 		default:
 			typeNode := createType(v.FileSet, n)
-			v.File.Children = append(v.File.Children, typeNode)
-			v.Blocks = append(v.Blocks, block{
-				Type: nodeBlock,
-				Node: typeNode,
-			})
+			v.Parent.AddNode(typeNode)
 			return nil
 		}
 	case *ast.ImportSpec:
 		importNode := createImport(v.FileSet, n)
-		v.File.Children = append(v.File.Children, importNode)
-		v.Blocks = append(v.Blocks, block{
-			Type: nodeBlock,
-			Node: importNode,
-		})
+		v.Parent.AddNode(importNode)
 		return nil
 	case *ast.ValueSpec:
 		switch v.GenDecl.Tok {
 		case token.CONST:
 			constNode := createConst(v.FileSet, n)
-			v.File.Children = append(v.File.Children, constNode)
-			v.Blocks = append(v.Blocks, block{
-				Type: nodeBlock,
-				Node: constNode,
-			})
+			v.Parent.AddNode(constNode)
 		case token.VAR:
 			varNode := createVar(v.FileSet, n)
-			v.File.Children = append(v.File.Children, varNode)
-			v.Blocks = append(v.Blocks, block{
-				Type: nodeBlock,
-				Node: varNode,
-			})
+			v.Parent.AddNode(varNode)
 		}
 		return nil
 	}
@@ -170,24 +157,23 @@ func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
 }
 
 func createFile(fset *token.FileSet, n *ast.File) *File {
-	return &File{
+	f := &File{
 		LocationSpan: locationSpanFromNode(fset, n),
 		FooterSpan: RuneSpan{
 			Start: 0,
 			End:   -1,
 		},
-		Children: []Node{
-			&Terminal{
-				Type: PackageNode,
-				Name: n.Name.Name,
-				LocationSpan: LocationSpan{
-					Start: locationFromPosition(fset, n.Package),
-					End:   locationFromPositions(fset, n.Name.Pos(), n.Name.End()),
-				},
-				Span: runeSpanFromPositions(fset, n.Package, n.Name.End()),
-			},
-		},
 	}
+	f.AddNode(&Terminal{
+		Type: PackageNode,
+		Name: n.Name.Name,
+		LocationSpan: LocationSpan{
+			Start: locationFromPosition(fset, n.Package),
+			End:   locationFromPositions(fset, n.Name.Pos(), n.Name.End()),
+		},
+		Span: runeSpanFromPositions(fset, n.Package, n.Name.End()),
+	})
+	return f
 }
 
 func createConst(fset *token.FileSet, n *ast.ValueSpec) *Terminal {
@@ -208,13 +194,12 @@ func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Terminal {
 	}
 }
 
-func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []block) {
+func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) *Container {
 	st, ok := typeSpec.Type.(*ast.InterfaceType)
 	if !ok {
 		panic("*ast.InterfaceType expected")
 	}
 
-	blocks := make([]block, 0, len(st.Methods.List)+2)
 	container := &Container{
 		Type:         InterfaceNode,
 		Name:         typeSpec.Name.Name,
@@ -223,10 +208,6 @@ func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, [
 		FooterSpan:   runeSpanFromPositions(fset, st.Methods.Closing, st.Methods.Closing),
 		Children:     make([]Node, 0, len(st.Methods.List)),
 	}
-	blocks = append(blocks, block{
-		Type: containerHeader,
-		Node: container,
-	})
 
 	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
 		switch n := node.(type) {
@@ -237,32 +218,22 @@ func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, [
 				LocationSpan: locationSpanFromNode(fset, n),
 				Span:         runeSpanFromNode(fset, n),
 			}
-			container.Children = append(container.Children, field)
-			blocks = append(blocks, block{
-				Type: nodeBlock,
-				Node: field,
-			})
+			container.AddNode(field)
 			return false
 		default:
 			return true
 		}
 	})
 
-	blocks = append(blocks, block{
-		Type: containerFooter,
-		Node: container,
-	})
-
-	return container, blocks
+	return container
 }
 
-func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []block) {
+func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) *Container {
 	st, ok := typeSpec.Type.(*ast.StructType)
 	if !ok {
 		panic("*ast.StructType expected")
 	}
 
-	blocks := make([]block, 0, len(st.Fields.List)+2)
 	container := &Container{
 		Type:         StructNode,
 		Name:         typeSpec.Name.Name,
@@ -271,10 +242,6 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 		FooterSpan:   runeSpanFromPositions(fset, st.Fields.Closing, st.Fields.Closing),
 		Children:     make([]Node, 0, len(st.Fields.List)),
 	}
-	blocks = append(blocks, block{
-		Type: containerHeader,
-		Node: container,
-	})
 
 	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
 		switch n := node.(type) {
@@ -285,23 +252,14 @@ func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) (*Container, []bl
 				LocationSpan: locationSpanFromNode(fset, n),
 				Span:         runeSpanFromNode(fset, n),
 			}
-			container.Children = append(container.Children, field)
-			blocks = append(blocks, block{
-				Type: nodeBlock,
-				Node: field,
-			})
+			container.AddNode(field)
 			return false
 		default:
 			return true
 		}
 	})
 
-	blocks = append(blocks, block{
-		Type: containerFooter,
-		Node: container,
-	})
-
-	return container, blocks
+	return container
 }
 
 func createType(fset *token.FileSet, n *ast.TypeSpec) *Terminal {

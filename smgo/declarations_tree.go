@@ -13,6 +13,14 @@ type File struct {
 	ParsingErrors []*ParsingError
 }
 
+func (f *File) AddNode(node Node) {
+	f.Children = append(f.Children, node)
+}
+
+func (f *File) Nodes() []Node {
+	return f.Children
+}
+
 type NodeType int
 
 //go:generate stringer -type=NodeType
@@ -36,6 +44,14 @@ type Container struct {
 	HeaderSpan   RuneSpan
 	FooterSpan   RuneSpan
 	Children     []Node
+}
+
+func (c *Container) AddNode(node Node) {
+	c.Children = append(c.Children, node)
+}
+
+func (c *Container) Nodes() []Node {
+	return c.Children
 }
 
 type Terminal struct {

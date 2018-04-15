@@ -36,7 +36,7 @@ func TestParseGroupedConst(t *testing.T) {
 					&smgo.Container{
 						Type:         smgo.ConstNode,
 						Name:         "const",
-						LocationSpan: newLocationSpan(2, 0, 6, 3),
+						LocationSpan: newLocationSpan(2, 0, 6, 2),
 						HeaderSpan:   smgo.RuneSpan{21, 29},
 						FooterSpan:   smgo.RuneSpan{67, 68},
 						Children: []smgo.Node{

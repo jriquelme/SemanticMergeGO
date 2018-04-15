@@ -7,6 +7,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+var PrintBlocks bool
+
 type blockType int
 
 //go:generate stringer -type=blockType
@@ -30,7 +32,36 @@ func (b *block) Container() *Container {
 	return b.Node.(*Container)
 }
 
-func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
+func addBlocksFrom(parent parentNode, blocks *[]block) {
+	for _, child := range parent.Nodes() {
+		switch n := child.(type) {
+		case *Container:
+			*blocks = append(*blocks, block{
+				Type: containerHeader,
+				Node: n,
+			})
+			addBlocksFrom(n, blocks)
+			*blocks = append(*blocks, block{
+				Type: containerFooter,
+				Node: n,
+			})
+		case *Terminal:
+			*blocks = append(*blocks, block{
+				Type: nodeBlock,
+				Node: n,
+			})
+		}
+	}
+}
+
+func fixBlockBoundaries(file *File, src []byte) error {
+	var blocks []block
+	addBlocksFrom(file, &blocks)
+
+	if PrintBlocks {
+		printBlocks("original blocks", blocks)
+	}
+
 	file.LocationSpan.Start.Column = 0
 
 	var pos int
@@ -78,6 +109,9 @@ func fixBlockBoundaries(file *File, blocks []block, src []byte) error {
 			panic("impossibru!")
 		}
 	}
+	if PrintBlocks {
+		printBlocks("fixed blocks", blocks)
+	}
 	return nil
 }
 
@@ -87,7 +121,7 @@ type debugBlock struct {
 	Span         RuneSpan
 }
 
-func printBlocks(blocks []block) {
+func printBlocks(title string, blocks []block) {
 	debugBlocks := make([]debugBlock, 0, len(blocks))
 	for _, b := range blocks {
 		switch b.Type {
@@ -113,7 +147,7 @@ func printBlocks(blocks []block) {
 			panic("impossibru!")
 		}
 	}
-	spew.Printf("=========\n")
-	spew.Dump("Debug Blocks", debugBlocks)
-	spew.Printf("=========\n")
+	spew.Printf("----------%s----------\n", title)
+	spew.Dump(debugBlocks)
+	spew.Printf("--------------------\n")
 }
