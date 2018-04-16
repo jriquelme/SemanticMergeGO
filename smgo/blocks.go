@@ -116,6 +116,7 @@ func fixBlockBoundaries(file *File, src []byte) error {
 }
 
 type debugBlock struct {
+	BlockType    blockType
 	Name         string
 	LocationSpan LocationSpan
 	Span         RuneSpan
@@ -127,18 +128,21 @@ func printBlocks(title string, blocks []block) {
 		switch b.Type {
 		case nodeBlock:
 			debugBlocks = append(debugBlocks, debugBlock{
+				BlockType:    nodeBlock,
 				Name:         b.Terminal().Name,
 				LocationSpan: b.Terminal().LocationSpan,
 				Span:         b.Terminal().Span,
 			})
 		case containerHeader:
 			debugBlocks = append(debugBlocks, debugBlock{
+				BlockType:    containerHeader,
 				Name:         b.Container().Name,
 				LocationSpan: b.Container().LocationSpan,
 				Span:         b.Container().HeaderSpan,
 			})
 		case containerFooter:
 			debugBlocks = append(debugBlocks, debugBlock{
+				BlockType:    containerFooter,
 				Name:         b.Container().Name,
 				LocationSpan: b.Container().LocationSpan,
 				Span:         b.Container().FooterSpan,
