@@ -34,6 +34,9 @@ type TestCase struct {
 
 func TestSmgoCli(t *testing.T) {
 	cli := filepath.Join(os.Getenv("GOPATH"), "bin", "smgo-cli")
+	if runtime.GOOS == "windows" {
+		cli = cli + ".exe"
+	}
 	_, err := os.Stat(cli)
 	require.Nil(t, err)
 
