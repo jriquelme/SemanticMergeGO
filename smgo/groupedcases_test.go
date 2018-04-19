@@ -67,6 +67,57 @@ func TestParseGroupedConst(t *testing.T) {
 			},
 		},
 		{
+			Src: "grouped_import.go_src",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 10, 10),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "groupedimport",
+						LocationSpan: newLocationSpan(1, 0, 1, 22),
+						Span:         smgo.RuneSpan{0, 21},
+					},
+					&smgo.Container{
+						Type:         smgo.ImportNode,
+						Name:         "import",
+						LocationSpan: newLocationSpan(2, 0, 8, 2),
+						HeaderSpan:   smgo.RuneSpan{22, 31},
+						FooterSpan:   smgo.RuneSpan{77, 78},
+						Children: []smgo.Node{
+							&smgo.Terminal{
+								Type:         smgo.ImportNode,
+								Name:         "io",
+								LocationSpan: newLocationSpan(4, 0, 4, 6),
+								Span:         smgo.RuneSpan{32, 37},
+							},
+							&smgo.Terminal{
+								Type:         smgo.ImportNode,
+								Name:         "io/util",
+								LocationSpan: newLocationSpan(5, 0, 5, 13),
+								Span:         smgo.RuneSpan{38, 50},
+							},
+							&smgo.Terminal{
+								Type:         smgo.ImportNode,
+								Name:         "github.com/pkg/errors",
+								LocationSpan: newLocationSpan(6, 0, 7, 25),
+								Span:         smgo.RuneSpan{51, 76},
+							},
+						},
+					},
+					&smgo.Container{
+						Type:         smgo.ImportNode,
+						Name:         "import",
+						LocationSpan: newLocationSpan(9, 0, 10, 10),
+						HeaderSpan:   smgo.RuneSpan{79, 87},
+						FooterSpan:   smgo.RuneSpan{88, 89},
+						Children:     nil,
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "grouped_var.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 9, 7),
