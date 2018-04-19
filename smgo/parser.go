@@ -101,6 +101,9 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 		if n.Lparen.IsValid() {
 			switch n.Tok {
 			case token.IMPORT:
+				importGroup := v.createImportGroup(n)
+				v.AddToParentContainer(importGroup)
+				v.Push(n, importGroup)
 			case token.CONST:
 				constGroup := v.createConstGroup(n)
 				v.AddToParentContainer(constGroup)
@@ -149,15 +152,18 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			panic("*ast.GenDecl expected")
 		}
 		switch gd.Tok {
-		case token.IMPORT:
 		case token.CONST:
 			constNode := v.createConstInGroup(n)
 			parentContainer.AddNode(constNode)
-		case token.TYPE:
 		case token.VAR:
 			varNode := v.createVarInGroup(n)
 			parentContainer.AddNode(varNode)
 		}
+		return nil
+	case *ast.ImportSpec:
+		_, parentContainer := v.Peek()
+		importNode := v.createImportInGroup(n)
+		parentContainer.AddNode(importNode)
 		return nil
 	case *ast.FuncDecl:
 		funcNode := v.createFunc(n)
@@ -273,6 +279,36 @@ func (v *visitor) createFunc(n *ast.FuncDecl) *Terminal {
 }
 
 func (v *visitor) createImport(n *ast.ImportSpec) *Terminal {
+	var name string
+	switch n.Path.Kind {
+	case token.STRING:
+		name = n.Path.Value[1 : len(n.Path.Value)-1]
+	default:
+		panic("Unknown token type for import Path")
+	}
+	return &Terminal{
+		Type:         ImportNode,
+		Name:         name,
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
+	}
+}
+
+func (v *visitor) createImportGroup(n *ast.GenDecl) *Container {
+	c := &Container{
+		Type:         ImportNode,
+		Name:         "import",
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.End()),
+	}
+	if len(n.Specs) > 0 {
+		c.Children = make([]Node, 0, len(n.Specs))
+	}
+	return c
+}
+
+func (v *visitor) createImportInGroup(n *ast.ImportSpec) *Terminal {
 	var name string
 	switch n.Path.Kind {
 	case token.STRING:

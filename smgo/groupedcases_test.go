@@ -93,7 +93,7 @@ func TestParseGroupedConst(t *testing.T) {
 							},
 							&smgo.Terminal{
 								Type:         smgo.ImportNode,
-								Name:         "io/util",
+								Name:         "io/ioutil",
 								LocationSpan: newLocationSpan(5, 0, 5, 13),
 								Span:         smgo.RuneSpan{38, 50},
 							},
