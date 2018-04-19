@@ -9,19 +9,26 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/text/encoding/charmap"
 )
 
 var ErrUnsupportedEncoding = errors.New("Unsupported encoding")
 
 // Parse parses the GO source code from src and returns a *smgo.File declarations tree.
 func Parse(src io.Reader, encoding string) (*File, error) {
+	encoding = strings.ToUpper(encoding)
+	switch encoding {
+	case "UTF-8":
+	case "WINDOWS-1252":
+		decoder := charmap.Windows1252.NewDecoder()
+		src = decoder.Reader(src)
+	default:
+		return nil, ErrUnsupportedEncoding
+	}
+
 	srcBytes, err := ioutil.ReadAll(src)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading src")
-	}
-	encoding = strings.ToUpper(encoding)
-	if encoding != "UTF-8" {
-		return nil, ErrUnsupportedEncoding
 	}
 
 	fset := token.NewFileSet()
