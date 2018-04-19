@@ -107,6 +107,9 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 				v.Push(n, constGroup)
 			case token.TYPE:
 			case token.VAR:
+				varGroup := v.createVarGroup(n)
+				v.AddToParentContainer(varGroup)
+				v.Push(n, varGroup)
 			}
 			return v
 		} else {
@@ -152,6 +155,8 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			parentContainer.AddNode(constNode)
 		case token.TYPE:
 		case token.VAR:
+			varNode := v.createVarInGroup(n)
+			parentContainer.AddNode(varNode)
 		}
 		return nil
 	case *ast.FuncDecl:
@@ -392,6 +397,29 @@ func (v *visitor) createVar(gd *ast.GenDecl, n *ast.ValueSpec) *Terminal {
 		Name:         n.Names[0].Name,
 		LocationSpan: locationSpanFromNode(v.FileSet, gd),
 		Span:         runeSpanFromNode(v.FileSet, gd),
+	}
+}
+
+func (v *visitor) createVarGroup(n *ast.GenDecl) *Container {
+	c := &Container{
+		Type:         VarNode,
+		Name:         "var",
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.End()),
+	}
+	if len(n.Specs) > 0 {
+		c.Children = make([]Node, 0, len(n.Specs))
+	}
+	return c
+}
+
+func (v *visitor) createVarInGroup(n *ast.ValueSpec) *Terminal {
+	return &Terminal{
+		Type:         VarNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
 	}
 }
 

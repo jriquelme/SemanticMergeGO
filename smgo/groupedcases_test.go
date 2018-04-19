@@ -69,7 +69,7 @@ func TestParseGroupedConst(t *testing.T) {
 		{
 			Src: "grouped_var.go",
 			ExpectedFile: &smgo.File{
-				LocationSpan: newLocationSpan(1, 0, 7, 2),
+				LocationSpan: newLocationSpan(1, 0, 9, 7),
 				FooterSpan:   smgo.RuneSpan{0, -1},
 				Children: []smgo.Node{
 					&smgo.Terminal{
