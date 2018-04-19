@@ -118,6 +118,141 @@ func TestParseGroupedConst(t *testing.T) {
 			},
 		},
 		{
+			Src: "grouped_type.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 34, 8),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "groupedtype",
+						LocationSpan: newLocationSpan(1, 0, 1, 20),
+						Span:         smgo.RuneSpan{0, 19},
+					},
+					&smgo.Terminal{
+						Type:         smgo.ImportNode,
+						Name:         "io",
+						LocationSpan: newLocationSpan(2, 0, 3, 12),
+						Span:         smgo.RuneSpan{20, 32},
+					},
+					&smgo.Container{
+						Type:         smgo.TypeNode,
+						Name:         "type",
+						LocationSpan: newLocationSpan(4, 0, 32, 2),
+						HeaderSpan:   smgo.RuneSpan{33, 40},
+						FooterSpan:   smgo.RuneSpan{334, 335},
+						Children: []smgo.Node{
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "String",
+								LocationSpan: newLocationSpan(6, 0, 6, 15),
+								Span:         smgo.RuneSpan{41, 55},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "StringAlias",
+								LocationSpan: newLocationSpan(7, 0, 8, 22),
+								Span:         smgo.RuneSpan{56, 78},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Map",
+								LocationSpan: newLocationSpan(9, 0, 9, 29),
+								Span:         smgo.RuneSpan{79, 107},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Array",
+								LocationSpan: newLocationSpan(10, 0, 10, 20),
+								Span:         smgo.RuneSpan{108, 127},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Chan",
+								LocationSpan: newLocationSpan(11, 0, 12, 17),
+								Span:         smgo.RuneSpan{128, 145},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Func",
+								LocationSpan: newLocationSpan(13, 0, 14, 19),
+								Span:         smgo.RuneSpan{146, 165},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "IntPointer",
+								LocationSpan: newLocationSpan(15, 0, 16, 17),
+								Span:         smgo.RuneSpan{166, 183},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "RedundantPar",
+								LocationSpan: newLocationSpan(17, 0, 18, 21),
+								Span:         smgo.RuneSpan{184, 205},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Reader",
+								LocationSpan: newLocationSpan(19, 0, 20, 18),
+								Span:         smgo.RuneSpan{206, 224},
+							},
+							&smgo.Container{
+								Type:         smgo.StructNode,
+								Name:         "Person",
+								LocationSpan: newLocationSpan(21, 0, 26, 3),
+								HeaderSpan:   smgo.RuneSpan{225, 242},
+								FooterSpan:   smgo.RuneSpan{268, 270},
+								Children: []smgo.Node{
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Name",
+										LocationSpan: newLocationSpan(23, 0, 23, 14),
+										Span:         smgo.RuneSpan{243, 256},
+									},
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Age",
+										LocationSpan: newLocationSpan(24, 0, 25, 10),
+										Span:         smgo.RuneSpan{257, 267},
+									},
+								},
+							},
+							&smgo.Container{
+								Type:         smgo.InterfaceNode,
+								Name:         "Figure",
+								LocationSpan: newLocationSpan(27, 0, 31, 3),
+								HeaderSpan:   smgo.RuneSpan{271, 291},
+								FooterSpan:   smgo.RuneSpan{331, 333},
+								Children: []smgo.Node{
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Area",
+										LocationSpan: newLocationSpan(29, 0, 29, 17),
+										Span:         smgo.RuneSpan{292, 308},
+									},
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Perimeter",
+										LocationSpan: newLocationSpan(30, 0, 30, 22),
+										Span:         smgo.RuneSpan{309, 330},
+									},
+								},
+							},
+						},
+					},
+					&smgo.Container{
+						Type:         smgo.TypeNode,
+						Name:         "type",
+						LocationSpan: newLocationSpan(33, 0, 34, 8),
+						HeaderSpan:   smgo.RuneSpan{336, 342},
+						FooterSpan:   smgo.RuneSpan{343, 344},
+						Children:     nil,
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "grouped_var.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 9, 7),
