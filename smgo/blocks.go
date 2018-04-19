@@ -87,6 +87,9 @@ func fixBlockBoundaries(fileSet *token.FileSet, file *File, src []byte) error {
 		case containerFooter:
 			n := b.Container()
 			n.FooterSpan.Start = offset
+			if (src[n.FooterSpan.End] == ')' || src[n.FooterSpan.End] == '}') && src[n.FooterSpan.End+1] == '\n' {
+				n.FooterSpan.End++
+			}
 			newPos := fileSet.Position(token.Pos(n.FooterSpan.End + 1))
 			n.LocationSpan.End.Line = newPos.Line
 			n.LocationSpan.End.Column = newPos.Column

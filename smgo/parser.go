@@ -109,6 +109,9 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 				v.AddToParentContainer(constGroup)
 				v.Push(n, constGroup)
 			case token.TYPE:
+				typeGroup := v.createTypeGroup(n)
+				v.AddToParentContainer(typeGroup)
+				v.Push(n, typeGroup)
 			case token.VAR:
 				varGroup := v.createVarGroup(n)
 				v.AddToParentContainer(varGroup)
@@ -416,6 +419,20 @@ func (v *visitor) createType(genDecl *ast.GenDecl, n *ast.TypeSpec) *Terminal {
 		LocationSpan: locationSpanFromNode(v.FileSet, genDecl),
 		Span:         runeSpanFromNode(v.FileSet, genDecl),
 	}
+}
+
+func (v *visitor) createTypeGroup(n *ast.GenDecl) *Container {
+	c := &Container{
+		Type:         TypeNode,
+		Name:         "type",
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.End()),
+	}
+	if len(n.Specs) > 0 {
+		c.Children = make([]Node, 0, len(n.Specs))
+	}
+	return c
 }
 
 func (v *visitor) createTypeInGroup(n *ast.TypeSpec) *Terminal {
