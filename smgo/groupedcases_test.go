@@ -66,6 +66,51 @@ func TestParseGroupedConst(t *testing.T) {
 				ParsingErrors: nil,
 			},
 		},
+		{
+			Src: "grouped_var.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 7, 2),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "groupedvar",
+						LocationSpan: newLocationSpan(1, 0, 1, 19),
+						Span:         smgo.RuneSpan{0, 18},
+					},
+					&smgo.Container{
+						Type:         smgo.VarNode,
+						Name:         "var",
+						LocationSpan: newLocationSpan(2, 0, 7, 2),
+						HeaderSpan:   smgo.RuneSpan{19, 25},
+						FooterSpan:   smgo.RuneSpan{52, 53},
+						Children: []smgo.Node{
+							&smgo.Terminal{
+								Type:         smgo.VarNode,
+								Name:         "X",
+								LocationSpan: newLocationSpan(4, 0, 4, 7),
+								Span:         smgo.RuneSpan{26, 32},
+							},
+							&smgo.Terminal{
+								Type:         smgo.VarNode,
+								Name:         "Z",
+								LocationSpan: newLocationSpan(5, 0, 6, 18),
+								Span:         smgo.RuneSpan{33, 51},
+							},
+						},
+					},
+					&smgo.Container{
+						Type:         smgo.VarNode,
+						Name:         "var",
+						LocationSpan: newLocationSpan(8, 0, 9, 7),
+						HeaderSpan:   smgo.RuneSpan{54, 59},
+						FooterSpan:   smgo.RuneSpan{60, 61},
+						Children:     nil,
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
 	}
 	for _, testCase := range cases {
 		name := testCase.Src[len("grouped_"):strings.LastIndex(testCase.Src, ".")]
