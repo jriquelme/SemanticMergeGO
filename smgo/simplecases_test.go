@@ -154,7 +154,7 @@ func TestParseSimpleCases(t *testing.T) {
 						FooterSpan:   smgo.RuneSpan{65, 66},
 						Children: []smgo.Node{
 							&smgo.Terminal{
-								Type:         smgo.FunctionNode,
+								Type:         smgo.FieldNode,
 								Name:         "Area",
 								LocationSpan: newLocationSpan(4, 0, 4, 16),
 								Span:         smgo.RuneSpan{49, 64},
