@@ -24,7 +24,7 @@ func TestParseGroupedConst(t *testing.T) {
 		{
 			Src: "grouped_const.go",
 			ExpectedFile: &smgo.File{
-				LocationSpan: newLocationSpan(1, 0, 6, 2),
+				LocationSpan: newLocationSpan(1, 0, 8, 9),
 				FooterSpan:   smgo.RuneSpan{0, -1},
 				Children: []smgo.Node{
 					&smgo.Terminal{
@@ -53,6 +53,14 @@ func TestParseGroupedConst(t *testing.T) {
 								Span:         smgo.RuneSpan{47, 66},
 							},
 						},
+					},
+					&smgo.Container{
+						Type:         smgo.ConstNode,
+						Name:         "const",
+						LocationSpan: newLocationSpan(7, 0, 8, 9),
+						HeaderSpan:   smgo.RuneSpan{69, 76},
+						FooterSpan:   smgo.RuneSpan{77, 78},
+						Children:     nil,
 					},
 				},
 				ParsingErrors: nil,
