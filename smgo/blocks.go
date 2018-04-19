@@ -1,8 +1,7 @@
 package smgo
 
 import (
-	"bytes"
-	"errors"
+	"go/token"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -54,7 +53,7 @@ func addBlocksFrom(parent parentNode, blocks *[]block) {
 	}
 }
 
-func fixBlockBoundaries(file *File, src []byte) error {
+func fixBlockBoundaries(fileSet *token.FileSet, file *File, src []byte) error {
 	var blocks []block
 	addBlocksFrom(file, &blocks)
 
@@ -64,51 +63,39 @@ func fixBlockBoundaries(file *File, src []byte) error {
 
 	file.LocationSpan.Start.Column = 0
 
-	var pos int
-	switch blocks[0].Type {
-	case nodeBlock:
-		n := blocks[0].Terminal()
-		n.LocationSpan.Start.Column = 0 // FIXME
-		pos = n.Span.End
-	default:
-		return errors.New("case not covered")
-	}
-
-	for _, b := range blocks[1:] {
+	offset := 0
+	for i := 0; i < len(blocks); i++ {
+		b := blocks[i]
 		switch b.Type {
 		case nodeBlock:
 			n := b.Terminal()
-			n.LocationSpan.Start.Column = 0 // FIXME
-			b := src[pos+1 : n.Span.Start]
-			newLines := bytes.Count(b, []byte{0x0a})
-			n.Span.Start = pos + 1
-			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
-			n.LocationSpan.Start.Column = 0
-			pos = n.Span.End
+			n.Span.Start = offset
+			newPos := fileSet.Position(token.Pos(n.Span.Start + 1))
+			n.LocationSpan.Start.Line = newPos.Line
+			n.LocationSpan.Start.Column = newPos.Column - 1
+			offset = n.Span.End + 1
 		case containerHeader:
 			n := b.Container()
-			n.LocationSpan.Start.Column = 0 // FIXME
-			b := src[pos+1 : n.HeaderSpan.Start]
-			newLines := bytes.Count(b, []byte{0x0a})
-			n.HeaderSpan.Start = pos + 1
-			n.HeaderSpan.End = n.HeaderSpan.End + 1
-			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
-			n.LocationSpan.Start.Column = 0
-			pos = n.HeaderSpan.End
+			n.HeaderSpan.Start = offset
+			newPos := fileSet.Position(token.Pos(n.HeaderSpan.Start + 1))
+			n.LocationSpan.Start.Line = newPos.Line
+			n.LocationSpan.Start.Column = newPos.Column - 1
+			if (src[n.HeaderSpan.End] == '(' || src[n.HeaderSpan.End] == '{') && src[n.HeaderSpan.End+1] == '\n' {
+				n.HeaderSpan.End++
+			}
+			offset = n.HeaderSpan.End + 1
 		case containerFooter:
 			n := b.Container()
-			n.LocationSpan.Start.Column = 0 // FIXME
-			b := src[pos+1 : n.FooterSpan.Start]
-			newLines := bytes.Count(b, []byte{0x0a})
-			n.FooterSpan.Start = pos + 1
-			n.FooterSpan.End = n.FooterSpan.End + 1
-			n.LocationSpan.Start.Line = n.LocationSpan.Start.Line - newLines
-			n.LocationSpan.Start.Column = 0
-			pos = n.FooterSpan.End
+			n.FooterSpan.Start = offset
+			newPos := fileSet.Position(token.Pos(n.FooterSpan.End + 1))
+			n.LocationSpan.End.Line = newPos.Line
+			n.LocationSpan.End.Column = newPos.Column
+			offset = n.FooterSpan.End + 1
 		default:
 			panic("impossibru!")
 		}
 	}
+
 	if PrintBlocks {
 		printBlocks("fixed blocks", blocks)
 	}

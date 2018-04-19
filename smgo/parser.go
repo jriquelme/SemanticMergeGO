@@ -43,24 +43,17 @@ func Parse(src io.Reader, encoding string) (*File, error) {
 		return file, nil
 	}
 
-	fv := &fileVisitor{
-		parserState: &parserState{
-			FileSet: fset,
-		},
+	v := &visitor{
+		FileSet: fset,
 	}
-	ast.Walk(fv, srcAST)
+	ast.Walk(v, srcAST)
 
-	err = fixBlockBoundaries(fv.File, srcBytes)
+	err = fixBlockBoundaries(fset, v.File, srcBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading fixing boundaries")
 	}
 
-	return fv.File, nil
-}
-
-type parserState struct {
-	FileSet *token.FileSet
-	File    *File
+	return v.File, nil
 }
 
 type parentNode interface {
@@ -68,97 +61,154 @@ type parentNode interface {
 	Nodes() []Node
 }
 
-type fileVisitor struct {
-	*parserState
+type visitor struct {
+	FileSet        *token.FileSet
+	File           *File
+	astStack       []ast.Node
+	containerStack []parentNode
 }
 
-func (v *fileVisitor) Visit(node ast.Node) ast.Visitor {
+func (v *visitor) Push(node ast.Node, container parentNode) {
+	v.astStack = append(v.astStack, node)
+	v.containerStack = append(v.containerStack, container)
+}
+
+func (v *visitor) Pop() {
+	v.astStack = v.astStack[:len(v.astStack)-1]
+	v.containerStack = v.containerStack[:len(v.containerStack)-1]
+}
+
+func (v *visitor) Peek() (ast.Node, parentNode) {
+	return v.astStack[len(v.astStack)-1], v.containerStack[len(v.containerStack)-1]
+}
+
+func (v *visitor) AddToParentContainer(node Node) {
+	_, parentContainer := v.Peek()
+	parentContainer.AddNode(node)
+}
+
+func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
+	case nil:
+		v.Pop()
+		return v
 	case *ast.File:
-		v.File = createFile(v.FileSet, n)
+		file := v.createFile(n)
+		v.File = file
+		v.Push(n, file)
 		return v
 	case *ast.GenDecl:
-		var parent parentNode = v.File
-		if n.Lparen != token.NoPos {
+		if n.Lparen.IsValid() {
 			switch n.Tok {
+			case token.IMPORT:
 			case token.CONST:
-				parent = &Container{
-					Type:         ConstNode,
-					Name:         "const",
-					LocationSpan: locationSpanFromNode(v.FileSet, n),
-					HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
-					FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.Rparen),
-					Children:     make([]Node, 0, len(n.Specs)),
-				}
-				v.File.AddNode(parent)
+				constGroup := v.createConstGroup(n)
+				v.AddToParentContainer(constGroup)
+				v.Push(n, constGroup)
+			case token.TYPE:
+			case token.VAR:
 			}
+			return v
+		} else {
+			switch n.Tok {
+			case token.IMPORT:
+				is, ok := n.Specs[0].(*ast.ImportSpec)
+				if !ok {
+					panic("*ast.ValueSpec expected")
+				}
+				importNode := v.createImport(is)
+				v.AddToParentContainer(importNode)
+			case token.CONST:
+				vs, ok := n.Specs[0].(*ast.ValueSpec)
+				if !ok {
+					panic("*ast.ValueSpec expected")
+				}
+				constNode := v.createConst(n, vs)
+				v.AddToParentContainer(constNode)
+			case token.TYPE:
+				_, parentContainer := v.Peek()
+				v.Push(n, parentContainer)
+				return v
+			case token.VAR:
+				vs, ok := n.Specs[0].(*ast.ValueSpec)
+				if !ok {
+					panic("*ast.ValueSpec expected")
+				}
+				varNode := v.createVar(n, vs)
+				v.AddToParentContainer(varNode)
+			}
+			return nil
 		}
-		return &genDeclVisitor{
-			parserState: v.parserState,
-			GenDecl:     n,
-			Parent:      parent,
+	case *ast.ValueSpec:
+		parentASTNode, parentContainer := v.Peek()
+		gd, ok := parentASTNode.(*ast.GenDecl)
+		if !ok {
+			panic("*ast.GenDecl expected")
 		}
+		switch gd.Tok {
+		case token.IMPORT:
+		case token.CONST:
+			constNode := v.createConstInGroup(n)
+			parentContainer.AddNode(constNode)
+		case token.TYPE:
+		case token.VAR:
+		}
+		return nil
 	case *ast.FuncDecl:
-		funcNode := createFunc(v.FileSet, n)
-		v.File.AddNode(funcNode)
+		funcNode := v.createFunc(n)
+		v.AddToParentContainer(funcNode)
 		return nil
-	default:
-		return nil
-	}
-}
-
-type genDeclVisitor struct {
-	*parserState
-	GenDecl *ast.GenDecl
-	Parent  parentNode
-}
-
-func (v *genDeclVisitor) Visit(node ast.Node) ast.Visitor {
-	switch n := node.(type) {
 	case *ast.TypeSpec:
+		parentASTNode, _ := v.Peek()
+		gd, ok := parentASTNode.(*ast.GenDecl)
+		if !ok {
+			panic("*ast.GenDecl expected")
+		}
 		switch n.Type.(type) {
 		case *ast.InterfaceType:
-			container := createInterface(v.FileSet, n)
-			if v.GenDecl.Lparen == token.NoPos {
-				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
-				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
+			var container *Container
+			if gd.Lparen.IsValid() {
+				container = v.createInterfaceInGroup(n)
+			} else {
+				container = v.createInterface(gd, n)
 			}
-			v.Parent.AddNode(container)
-			return nil
+			v.AddToParentContainer(container)
+			v.Push(n, container)
+			return v
 		case *ast.StructType:
-			container := createStruct(v.FileSet, n)
-			if v.GenDecl.Lparen == token.NoPos {
-				container.LocationSpan.Start = locationFromPosition(v.FileSet, v.GenDecl.Pos())
-				container.HeaderSpan.Start = v.FileSet.Position(v.GenDecl.Pos()).Offset
+			var container *Container
+			if gd.Lparen.IsValid() {
+				container = v.createStructInGroup(n)
+			} else {
+				container = v.createStruct(gd, n)
 			}
-			v.Parent.AddNode(container)
-			return nil
+			v.AddToParentContainer(container)
+			v.Push(n, container)
+			return v
 		default:
-			typeNode := createType(v.FileSet, n)
-			v.Parent.AddNode(typeNode)
+			var terminal *Terminal
+			if gd.Lparen.IsValid() {
+				terminal = v.createTypeInGroup(n)
+			} else {
+				terminal = v.createType(gd, n)
+			}
+			v.AddToParentContainer(terminal)
 			return nil
 		}
-	case *ast.ImportSpec:
-		importNode := createImport(v.FileSet, n)
-		v.Parent.AddNode(importNode)
+	case *ast.Field:
+		fieldNode := v.createField(n)
+		v.AddToParentContainer(fieldNode)
 		return nil
-	case *ast.ValueSpec:
-		switch v.GenDecl.Tok {
-		case token.CONST:
-			constNode := createConst(v.FileSet, n)
-			v.Parent.AddNode(constNode)
-		case token.VAR:
-			varNode := createVar(v.FileSet, n)
-			v.Parent.AddNode(varNode)
-		}
-		return nil
+	default:
+		_, container := v.Peek()
+		v.Push(n, container)
+		return v
 	}
-	return nil
 }
 
-func createFile(fset *token.FileSet, n *ast.File) *File {
+func (v *visitor) createFile(n *ast.File) *File {
 	f := &File{
-		LocationSpan: locationSpanFromNode(fset, n),
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
 		FooterSpan: RuneSpan{
 			Start: 0,
 			End:   -1,
@@ -168,119 +218,56 @@ func createFile(fset *token.FileSet, n *ast.File) *File {
 		Type: PackageNode,
 		Name: n.Name.Name,
 		LocationSpan: LocationSpan{
-			Start: locationFromPosition(fset, n.Package),
-			End:   locationFromPositions(fset, n.Name.Pos(), n.Name.End()),
+			Start: locationFromPosition(v.FileSet, n.Package),
+			End:   locationFromPositions(v.FileSet, n.Name.Pos(), n.Name.End()),
 		},
-		Span: runeSpanFromPositions(fset, n.Package, n.Name.End()),
+		Span: runeSpanFromPositions(v.FileSet, n.Package, n.Name.End()),
 	})
 	return f
 }
 
-func createConst(fset *token.FileSet, n *ast.ValueSpec) *Terminal {
+func (v *visitor) createConst(gd *ast.GenDecl, n *ast.ValueSpec) *Terminal {
 	return &Terminal{
 		Type:         ConstNode,
 		Name:         n.Names[0].Name,
-		LocationSpan: locationSpanFromNode(fset, n),
-		Span:         runeSpanFromNode(fset, n),
+		LocationSpan: locationSpanFromNode(v.FileSet, gd),
+		Span:         runeSpanFromNode(v.FileSet, gd),
 	}
 }
 
-func createFunc(fset *token.FileSet, n *ast.FuncDecl) *Terminal {
+func (v *visitor) createConstGroup(n *ast.GenDecl) *Container {
+	c := &Container{
+		Type:         ConstNode,
+		Name:         "const",
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, n.Pos(), n.Lparen),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, n.Rparen, n.End()),
+	}
+	if len(n.Specs) > 0 {
+		c.Children = make([]Node, 0, len(n.Specs))
+	}
+	return c
+}
+
+func (v *visitor) createConstInGroup(n *ast.ValueSpec) *Terminal {
+	return &Terminal{
+		Type:         ConstNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
+	}
+}
+
+func (v *visitor) createFunc(n *ast.FuncDecl) *Terminal {
 	return &Terminal{
 		Type:         FunctionNode,
 		Name:         n.Name.Name,
-		LocationSpan: locationSpanFromNode(fset, n),
-		Span:         runeSpanFromNode(fset, n),
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
 	}
 }
 
-func createInterface(fset *token.FileSet, typeSpec *ast.TypeSpec) *Container {
-	st, ok := typeSpec.Type.(*ast.InterfaceType)
-	if !ok {
-		panic("*ast.InterfaceType expected")
-	}
-
-	container := &Container{
-		Type:         InterfaceNode,
-		Name:         typeSpec.Name.Name,
-		LocationSpan: locationSpanFromNode(fset, typeSpec),
-		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Methods.Opening),
-		FooterSpan:   runeSpanFromPositions(fset, st.Methods.Closing, st.Methods.Closing),
-		Children:     make([]Node, 0, len(st.Methods.List)),
-	}
-
-	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.Field:
-			field := &Terminal{
-				Type:         FunctionNode,
-				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
-				LocationSpan: locationSpanFromNode(fset, n),
-				Span:         runeSpanFromNode(fset, n),
-			}
-			container.AddNode(field)
-			return false
-		default:
-			return true
-		}
-	})
-
-	return container
-}
-
-func createStruct(fset *token.FileSet, typeSpec *ast.TypeSpec) *Container {
-	st, ok := typeSpec.Type.(*ast.StructType)
-	if !ok {
-		panic("*ast.StructType expected")
-	}
-
-	container := &Container{
-		Type:         StructNode,
-		Name:         typeSpec.Name.Name,
-		LocationSpan: locationSpanFromNode(fset, typeSpec),
-		HeaderSpan:   runeSpanFromPositions(fset, typeSpec.Pos(), st.Fields.Opening),
-		FooterSpan:   runeSpanFromPositions(fset, st.Fields.Closing, st.Fields.Closing),
-		Children:     make([]Node, 0, len(st.Fields.List)),
-	}
-
-	ast.Inspect(typeSpec.Type, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.Field:
-			field := &Terminal{
-				Type:         FieldNode,
-				Name:         n.Names[0].Name, // FIXME: won't work with anonymous fields
-				LocationSpan: locationSpanFromNode(fset, n),
-				Span:         runeSpanFromNode(fset, n),
-			}
-			container.AddNode(field)
-			return false
-		default:
-			return true
-		}
-	})
-
-	return container
-}
-
-func createType(fset *token.FileSet, n *ast.TypeSpec) *Terminal {
-	return &Terminal{
-		Type:         TypeNode,
-		Name:         n.Name.Name,
-		LocationSpan: locationSpanFromNode(fset, n),
-		Span:         runeSpanFromNode(fset, n),
-	}
-}
-
-func createVar(fset *token.FileSet, n *ast.ValueSpec) *Terminal {
-	return &Terminal{
-		Type:         VarNode,
-		Name:         n.Names[0].Name,
-		LocationSpan: locationSpanFromNode(fset, n),
-		Span:         runeSpanFromNode(fset, n),
-	}
-}
-
-func createImport(fset *token.FileSet, n *ast.ImportSpec) *Terminal {
+func (v *visitor) createImport(n *ast.ImportSpec) *Terminal {
 	var name string
 	switch n.Path.Kind {
 	case token.STRING:
@@ -291,8 +278,120 @@ func createImport(fset *token.FileSet, n *ast.ImportSpec) *Terminal {
 	return &Terminal{
 		Type:         ImportNode,
 		Name:         name,
-		LocationSpan: locationSpanFromNode(fset, n),
-		Span:         runeSpanFromNode(fset, n),
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
+	}
+}
+
+func (v *visitor) createInterface(genDecl *ast.GenDecl, typeSpec *ast.TypeSpec) *Container {
+	st, ok := typeSpec.Type.(*ast.InterfaceType)
+	if !ok {
+		panic("*ast.InterfaceType expected")
+	}
+
+	container := &Container{
+		Type:         InterfaceNode,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, genDecl),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, genDecl.Pos(), st.Methods.Opening),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, st.Methods.Closing, genDecl.End()),
+	}
+	if len(st.Methods.List) > 0 {
+		container.Children = make([]Node, 0, len(st.Methods.List))
+	}
+	return container
+}
+
+func (v *visitor) createInterfaceInGroup(typeSpec *ast.TypeSpec) *Container {
+	st, ok := typeSpec.Type.(*ast.InterfaceType)
+	if !ok {
+		panic("*ast.InterfaceType expected")
+	}
+
+	container := &Container{
+		Type:         InterfaceNode,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, typeSpec),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, typeSpec.Pos(), st.Methods.Opening),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, st.Methods.Closing, st.Methods.Closing),
+	}
+	if len(st.Methods.List) > 0 {
+		container.Children = make([]Node, 0, len(st.Methods.List))
+	}
+	return container
+}
+
+func (v *visitor) createStruct(genDecl *ast.GenDecl, typeSpec *ast.TypeSpec) *Container {
+	st, ok := typeSpec.Type.(*ast.StructType)
+	if !ok {
+		panic("*ast.StructType expected")
+	}
+
+	container := &Container{
+		Type:         StructNode,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, genDecl),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, genDecl.Pos(), st.Fields.Opening),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, st.Fields.Closing, genDecl.End()),
+	}
+	if len(st.Fields.List) > 0 {
+		container.Children = make([]Node, 0, len(st.Fields.List))
+	}
+	return container
+}
+
+func (v *visitor) createStructInGroup(typeSpec *ast.TypeSpec) *Container {
+	st, ok := typeSpec.Type.(*ast.StructType)
+	if !ok {
+		panic("*ast.StructType expected")
+	}
+
+	container := &Container{
+		Type:         StructNode,
+		Name:         typeSpec.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, typeSpec),
+		HeaderSpan:   runeSpanFromPositions(v.FileSet, typeSpec.Pos(), st.Fields.Opening),
+		FooterSpan:   runeSpanFromPositions(v.FileSet, st.Fields.Closing, st.Fields.Closing),
+	}
+	if len(st.Fields.List) > 0 {
+		container.Children = make([]Node, 0, len(st.Fields.List))
+	}
+	return container
+}
+
+func (v *visitor) createField(n *ast.Field) *Terminal {
+	return &Terminal{
+		Type:         FieldNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
+	}
+}
+
+func (v *visitor) createType(genDecl *ast.GenDecl, n *ast.TypeSpec) *Terminal {
+	return &Terminal{
+		Type:         TypeNode,
+		Name:         n.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, genDecl),
+		Span:         runeSpanFromNode(v.FileSet, genDecl),
+	}
+}
+
+func (v *visitor) createTypeInGroup(n *ast.TypeSpec) *Terminal {
+	return &Terminal{
+		Type:         TypeNode,
+		Name:         n.Name.Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, n),
+		Span:         runeSpanFromNode(v.FileSet, n),
+	}
+}
+
+func (v *visitor) createVar(gd *ast.GenDecl, n *ast.ValueSpec) *Terminal {
+	return &Terminal{
+		Type:         VarNode,
+		Name:         n.Names[0].Name,
+		LocationSpan: locationSpanFromNode(v.FileSet, gd),
+		Span:         runeSpanFromNode(v.FileSet, gd),
 	}
 }
 
