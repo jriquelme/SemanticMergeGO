@@ -1,7 +1,6 @@
 package smgo_test
 
 import (
-	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -11,46 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func newLocationSpan(startLine, startColumn, endLine, endColumn int) smgo.LocationSpan {
-	return smgo.LocationSpan{
-		Start: smgo.Location{
-			Line:   startLine,
-			Column: startColumn,
-		},
-		End: smgo.Location{
-			Line:   endLine,
-			Column: endColumn,
-		},
-	}
-}
-
-func TestParseEmpty(t *testing.T) {
-	t.Parallel()
-	if testing.Verbose() {
-		smgo.PrintBlocks = true
-	}
-
-	src := bytes.NewReader([]byte{})
-	file, err := smgo.Parse(src, "UTF-8")
-	assert.NotNil(t, file)
-	assert.Nil(t, err)
-
-	assert.Equal(t, &smgo.File{
-		LocationSpan: newLocationSpan(1, 0, 1, 0),
-		FooterSpan:   smgo.RuneSpan{0, -1},
-		Children:     nil,
-		ParsingErrors: []*smgo.ParsingError{
-			{
-				Location: smgo.Location{1, 0},
-				Message:  "1:1: expected 'package', found 'EOF'",
-			},
-		},
-	}, file)
-	if t.Failed() {
-		spew.Dump(t.Name(), file)
-	}
-}
 
 func TestParseSimpleCases(t *testing.T) {
 	t.Parallel()
