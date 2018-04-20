@@ -1,0 +1,21 @@
+package commentimport
+
+// group of imports
+// io and..
+import (
+	// io
+	"io"
+	"io/ioutil"
+
+	// errors pkg
+	// very useful
+	"github.com/pkg/errors"
+)
+
+// empty import group
+import ()
+
+import "fmt"
+
+// strings pkg
+import "strings"
