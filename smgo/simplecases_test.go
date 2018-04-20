@@ -91,6 +91,28 @@ func TestParseSimpleCases(t *testing.T) {
 			},
 		},
 		{
+			Src: "simple_footer.go_src",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 8, 1),
+				FooterSpan:   smgo.RuneSpan{51, 53},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "simplefooter",
+						LocationSpan: newLocationSpan(1, 0, 1, 21),
+						Span:         smgo.RuneSpan{0, 20},
+					},
+					&smgo.Terminal{
+						Type:         smgo.FunctionNode,
+						Name:         "asdf",
+						LocationSpan: newLocationSpan(2, 0, 5, 2),
+						Span:         smgo.RuneSpan{21, 50},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "simple_func.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 5, 2),

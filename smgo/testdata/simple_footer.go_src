@@ -1,0 +1,8 @@
+package simplefooter
+
+func asdf() {
+	print("ok")
+}
+
+
+
