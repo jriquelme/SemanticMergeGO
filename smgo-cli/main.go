@@ -73,5 +73,8 @@ func parse(src, encoding, output string) error {
 	defer outputFile.Close()
 	yamlFile := toFile(dtFile)
 	yamlFile.Name = src
-	return yaml.NewEncoder(outputFile).Encode(yamlFile)
+
+	yamlEncoder := yaml.NewEncoder(outputFile)
+	defer yamlEncoder.Close()
+	return yamlEncoder.Encode(yamlFile)
 }
