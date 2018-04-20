@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseGroupedConst(t *testing.T) {
+func TestParseGroupedCases(t *testing.T) {
 	t.Parallel()
 	if testing.Verbose() {
 		smgo.PrintBlocks = true
