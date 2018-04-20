@@ -99,6 +99,15 @@ func fixBlockBoundaries(fileSet *token.FileSet, file *File, src []byte) error {
 		}
 	}
 
+	if offset < len(src) {
+		file.FooterSpan = RuneSpan{offset, len(src) - 1}
+		newPos := fileSet.Position(token.Pos(len(src)))
+		file.LocationSpan.End = Location{
+			Line:   newPos.Line,
+			Column: newPos.Column,
+		}
+	}
+
 	if PrintBlocks {
 		printBlocks("fixed blocks", blocks)
 	}
