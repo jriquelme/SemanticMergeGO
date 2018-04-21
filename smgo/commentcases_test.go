@@ -135,6 +135,132 @@ func TestParseCommentCases(t *testing.T) {
 				ParsingErrors: nil,
 			},
 		},
+		{
+			Src: "comment_type.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 50, 2),
+				FooterSpan:   smgo.RuneSpan{0, -1},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "commenttype",
+						LocationSpan: newLocationSpan(1, 0, 1, 20),
+						Span:         smgo.RuneSpan{0, 19},
+					},
+					&smgo.Container{
+						Type:         smgo.TypeNode,
+						Name:         "type",
+						LocationSpan: newLocationSpan(2, 0, 35, 13),
+						HeaderSpan:   smgo.RuneSpan{20, 51},
+						FooterSpan:   smgo.RuneSpan{449, 488},
+						Children: []smgo.Node{
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "String",
+								LocationSpan: newLocationSpan(5, 0, 6, 23),
+								Span:         smgo.RuneSpan{52, 90},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "StringAlias",
+								LocationSpan: newLocationSpan(7, 0, 9, 25),
+								Span:         smgo.RuneSpan{91, 129},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Map",
+								LocationSpan: newLocationSpan(10, 0, 11, 21),
+								Span:         smgo.RuneSpan{130, 158},
+							},
+							&smgo.Terminal{
+								Type:         smgo.TypeNode,
+								Name:         "Array",
+								LocationSpan: newLocationSpan(12, 0, 13, 14),
+								Span:         smgo.RuneSpan{159, 182},
+							},
+							&smgo.Container{
+								Type:         smgo.StructNode,
+								Name:         "Person",
+								LocationSpan: newLocationSpan(14, 0, 21, 14),
+								HeaderSpan:   smgo.RuneSpan{183, 218},
+								FooterSpan:   smgo.RuneSpan{262, 275},
+								Children: []smgo.Node{
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Name",
+										LocationSpan: newLocationSpan(17, 0, 17, 14),
+										Span:         smgo.RuneSpan{219, 232},
+									},
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Age",
+										LocationSpan: newLocationSpan(18, 0, 20, 19),
+										Span:         smgo.RuneSpan{233, 261},
+									},
+								},
+							},
+							&smgo.Container{
+								Type:         smgo.InterfaceNode,
+								Name:         "Figure",
+								LocationSpan: newLocationSpan(22, 0, 31, 14),
+								HeaderSpan:   smgo.RuneSpan{276, 335},
+								FooterSpan:   smgo.RuneSpan{414, 448},
+								Children: []smgo.Node{
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Area",
+										LocationSpan: newLocationSpan(25, 0, 26, 24),
+										Span:         smgo.RuneSpan{336, 369},
+									},
+									&smgo.Terminal{
+										Type:         smgo.FieldNode,
+										Name:         "Perimeter",
+										LocationSpan: newLocationSpan(27, 0, 28, 29),
+										Span:         smgo.RuneSpan{370, 413},
+									},
+								},
+							},
+						},
+					},
+					&smgo.Container{
+						Type:         smgo.TypeNode,
+						Name:         "type",
+						LocationSpan: newLocationSpan(36, 0, 38, 24),
+						HeaderSpan:   smgo.RuneSpan{489, 515},
+						FooterSpan:   smgo.RuneSpan{516, 533},
+						Children:     nil,
+					},
+					&smgo.Terminal{
+						Type:         smgo.TypeNode,
+						Name:         "Chan",
+						LocationSpan: newLocationSpan(39, 0, 41, 30),
+						Span:         smgo.RuneSpan{534, 580},
+					},
+					&smgo.Container{
+						Type:         smgo.StructNode,
+						Name:         "AnotherStruct",
+						LocationSpan: newLocationSpan(42, 0, 50, 2),
+						HeaderSpan:   smgo.RuneSpan{581, 627},
+						FooterSpan:   smgo.RuneSpan{706, 707},
+						Children: []smgo.Node{
+							&smgo.Terminal{
+								Type:         smgo.FieldNode,
+								Name:         "Func",
+								LocationSpan: newLocationSpan(45, 0, 46, 29),
+								Span:         smgo.RuneSpan{628, 665},
+							},
+							&smgo.Terminal{
+								Type:         smgo.FieldNode,
+								Name:         "IntPointer",
+								LocationSpan: newLocationSpan(47, 0, 49, 27),
+								Span:         smgo.RuneSpan{666, 705},
+							},
+						},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
 	}
 	for _, testCase := range cases {
 		name := testCase.Src[len("comment_"):strings.LastIndex(testCase.Src, ".")]
