@@ -4,9 +4,9 @@ package smgo
 
 import "strconv"
 
-const _NodeType_name = "PackageNodeFunctionNodeFieldNodeImportNodeConstNodeVarNodeTypeNodeStructNodeInterfaceNode"
+const _NodeType_name = "PackageNodeFunctionNodeFieldNodeImportNodeConstNodeVarNodeTypeNodeStructNodeInterfaceNodeComment"
 
-var _NodeType_index = [...]uint8{0, 11, 23, 32, 42, 51, 58, 66, 76, 89}
+var _NodeType_index = [...]uint8{0, 11, 23, 32, 42, 51, 58, 66, 76, 89, 96}
 
 func (i NodeType) String() string {
 	if i < 0 || i >= NodeType(len(_NodeType_index)-1) {

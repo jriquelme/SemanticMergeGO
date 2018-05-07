@@ -35,6 +35,7 @@ const (
 	TypeNode
 	StructNode
 	InterfaceNode
+	Comment
 )
 
 type Container struct {
