@@ -136,6 +136,34 @@ func TestParseCommentCases(t *testing.T) {
 			},
 		},
 		{
+			Src: "comment_pkg.go",
+			ExpectedFile: &smgo.File{
+				LocationSpan: newLocationSpan(1, 0, 10, 12),
+				FooterSpan:   smgo.RuneSpan{90, 111},
+				Children: []smgo.Node{
+					&smgo.Terminal{
+						Type:         smgo.Comment,
+						Name:         "commentpkg...",
+						LocationSpan: newLocationSpan(1, 0, 2, 15),
+						Span:         smgo.RuneSpan{0, 34},
+					},
+					&smgo.Terminal{
+						Type:         smgo.PackageNode,
+						Name:         "commentpkg",
+						LocationSpan: newLocationSpan(3, 0, 5, 19),
+						Span:         smgo.RuneSpan{35, 69},
+					},
+					&smgo.Terminal{
+						Type:         smgo.Comment,
+						Name:         "another co...",
+						LocationSpan: newLocationSpan(6, 0, 7, 19),
+						Span:         smgo.RuneSpan{70, 89},
+					},
+				},
+				ParsingErrors: nil,
+			},
+		},
+		{
 			Src: "comment_type.go",
 			ExpectedFile: &smgo.File{
 				LocationSpan: newLocationSpan(1, 0, 50, 2),
